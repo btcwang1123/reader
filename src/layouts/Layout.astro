@@ -1,0 +1,61 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+const { title = '', description = '我讀過的書,以及寫下的心得與摘錄' } = Astro.props;
+
+const SITE_TITLE = '閱讀書架';
+const BASE = import.meta.env.BASE_URL;
+const nav = [
+  { href: `${BASE}`, label: '首頁' },
+  { href: `${BASE}books/`, label: '書庫' },
+  { href: `${BASE}stats/`, label: '統計' },
+  { href: `${BASE}export/`, label: '匯出' },
+  { href: `${BASE}about/`, label: '關於' }
+];
+---
+
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+    <link rel="icon" type="image/svg+xml" href={`${BASE}favicon.svg`} />
+    <title>{title ? `${title} · ${SITE_TITLE}` : SITE_TITLE}</title>
+    <meta name="description" content={description} />
+  </head>
+  <body class="min-h-screen">
+    <header class="border-b border-amber-200 bg-amber-100/60">
+      <div
+        class="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-3 px-4 py-6"
+      >
+        <a href={BASE} class="flex items-center gap-2 text-xl font-serif font-bold text-stone-800">
+          <span aria-hidden="true">📚</span>
+          {SITE_TITLE}
+        </a>
+        <nav class="flex flex-wrap gap-5 text-sm">
+          {nav.map((item) => (
+            <a
+              href={item.href}
+              class="text-stone-600 transition hover:text-amber-700"
+            >
+              {item.label}
+            </a>
+          ))}
+        </nav>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-4xl px-4 py-10">
+      <slot />
+    </main>
+
+    <footer class="border-t border-amber-200 py-8 text-center text-sm text-stone-500">
+      <p>{SITE_TITLE} · Astro 靜態網站 · 資料皆以 Markdown 保存</p>
+    </footer>
+  </body>
+</html>

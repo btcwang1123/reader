@@ -1,0 +1,66 @@
+---
+import Layout from '../layouts/Layout.astro';
+import BookCard from '../components/BookCard.astro';
+import { getCollection } from 'astro:content';
+import { sortByStartedDesc } from '../utils/books';
+
+const all = sortByStartedDesc(await getCollection('books'));
+const finished = all.filter((b) => b.data.status === 'finished');
+const reading = all.filter((b) => b.data.status === 'reading');
+
+const currentYear = new Date().getFullYear();
+const finishedThisYear = finished.filter(
+  (b) => b.data.finishedAt?.getFullYear() === currentYear
+);
+const totalPages = finished.reduce(
+  (sum, b) => sum + (b.data.progress?.totalPages ?? 0),
+  0
+);
+const avgRating = finished.length
+  ? finished.reduce((s, b) => s + (b.data.rating ?? 0), 0) / finished.length
+  : 0;
+
+const stats = [
+  { label: '累積已讀', value: String(finished.length), unit: '本', icon: '✅' },
+  { label: `${currentYear} 年已讀`, value: String(finishedThisYear.length), unit: '本', icon: '📖' },
+  { label: '平均評分', value: avgRating ? avgRating.toFixed(1) : '—', unit: '/ 5', icon: '⭐' },
+  { label: '累積頁數', value: totalPages.toLocaleString(), unit: '頁', icon: '📄' }
+];
+---
+
+<Layout>
+  <section class="grid grid-cols-2 gap-4 md:grid-cols-4">
+    {stats.map((s) => (
+      <div class="rounded-xl border border-amber-200 bg-white p-4 text-center shadow-sm">
+        <div class="text-2xl" aria-hidden="true">{s.icon}</div>
+        <div class="mt-1 text-2xl font-bold text-stone-800">
+          {s.value}
+          <span class="ml-1 text-sm font-normal text-stone-500">{s.unit}</span>
+        </div>
+        <div class="text-sm text-stone-500">{s.label}</div>
+      </div>
+    ))}
+  </section>
+
+  {reading.length > 0 && (
+    <section class="mt-10">
+      <h2 class="mb-4 text-xl font-bold text-stone-800">📖 正在讀</h2>
+      <div class="grid gap-4">
+        {reading.map((b) => (
+          <BookCard book={b} />
+        ))}
+      </div>
+    </section>
+  )}
+
+  {finished.length > 0 && (
+    <section class="mt-10">
+      <h2 class="mb-4 text-xl font-bold text-stone-800">🆕 最近讀完</h2>
+      <div class="grid gap-4">
+        {finished.slice(0, 5).map((b) => (
+          <BookCard book={b} />
+        ))}
+      </div>
+    </section>
+  )}
+</Layout>

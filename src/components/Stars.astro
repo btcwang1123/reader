@@ -1,0 +1,12 @@
+---
+import { starString } from '../utils/books';
+
+interface Props {
+  rating: number;
+}
+const { rating } = Astro.props;
+---
+
+<span class="text-amber-500" aria-label={`${rating} 顆星`}>
+  {starString(rating)}
+</span>

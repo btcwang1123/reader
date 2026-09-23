@@ -1,0 +1,35 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import BookCard from '../../components/BookCard.astro';
+import { getCollection } from 'astro:content';
+import { sortByStartedDesc } from '../../utils/books';
+
+export async function getStaticPaths() {
+  const all = await getCollection('books');
+  const tags = [...new Set(all.flatMap((b) => b.data.tags))].sort((a, b) =>
+    a.localeCompare(b, 'zh-Hant')
+  );
+  return tags.map((tag) => ({ params: { tag } }));
+}
+
+const { tag } = Astro.props;
+const all = sortByStartedDesc(await getCollection('books'));
+const books = all.filter((b) => b.data.tags.includes(tag));
+---
+
+<Layout title={`#${tag}`}>
+  <nav class="mb-6 text-sm text-stone-500">
+    <a href={`${import.meta.env.BASE_URL}books/`} class="hover:text-amber-700">書庫</a>
+    <span class="mx-2">/</span>
+    <span class="text-stone-700">#{tag}</span>
+  </nav>
+
+  <h1 class="mb-2 text-2xl font-bold">#{tag}</h1>
+  <p class="mb-6 text-sm text-stone-500">共 {books.length} 本</p>
+
+  <div class="grid gap-4 md:grid-cols-2">
+    {books.map((b) => (
+      <BookCard book={b} />
+    ))}
+  </div>
+</Layout>

@@ -1,0 +1,86 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Stars from '../../components/Stars.astro';
+import { getCollection, render } from 'astro:content';
+import { STATUS_LABELS } from '../../utils/books';
+
+export async function getStaticPaths() {
+  const books = await getCollection('books');
+  return books.map((book) => ({
+    params: { slug: book.id },
+    props: { book }
+  }));
+}
+
+const { book } = Astro.props;
+const { Content } = await render(book);
+const { title, author, cover, status, rating, tags, isbn, publisher, publishedYear, startedAt, finishedAt, progress } = book.data;
+const BASE = import.meta.env.BASE_URL;
+---
+
+<Layout title={title} description={`${title} — ${author}`}>
+  <nav class="mb-6 text-sm text-stone-500">
+    <a href={`${BASE}books/`} class="hover:text-amber-700">書庫</a>
+    <span class="mx-2">/</span>
+    <span class="text-stone-700">{title}</span>
+  </nav>
+
+  <div class="mb-10 flex flex-col gap-6 sm:flex-row">
+    {cover && (
+      <img
+        src={cover.startsWith('/') ? BASE + cover.slice(1) : cover}
+        alt={`${title} 封面`}
+        class="h-56 w-40 flex-shrink-0 rounded-lg bg-amber-100 object-cover shadow"
+      />
+    )}
+    <div class="min-w-0">
+      <p class="text-sm font-semibold tracking-widest text-amber-700">
+        {STATUS_LABELS[status]}
+      </p>
+      <h1 class="mt-1 font-serif text-3xl font-bold leading-tight">{title}</h1>
+      <p class="mt-2 text-lg text-stone-600">作者：{author}</p>
+
+      <dl class="mt-4 grid grid-cols-2 gap-x-6 gap-y-1 text-sm text-stone-600 sm:grid-cols-3">
+        {publisher && (
+          <div><dt class="text-stone-400">出版社</dt><dd>{publisher}</dd></div>
+        )}
+        {publishedYear && (
+          <div><dt class="text-stone-400">出版年</dt><dd>{publishedYear}</dd></div>
+        )}
+        {isbn && (
+          <div><dt class="text-stone-400">ISBN</dt><dd>{isbn}</dd></div>
+        )}
+        {startedAt && (
+          <div><dt class="text-stone-400">開始閱讀</dt><dd>{startedAt.toISOString().slice(0, 10)}</dd></div>
+        )}
+        {finishedAt && (
+          <div><dt class="text-stone-400">讀完日期</dt><dd>{finishedAt.toISOString().slice(0, 10)}</dd></div>
+        )}
+        {progress && (
+          <div><dt class="text-stone-400">進度</dt><dd>{progress.currentPage} / {progress.totalPages} 頁</dd></div>
+        )}
+      </dl>
+
+      {rating && (
+        <p class="mt-4 flex items-center gap-2 text-lg">
+          <Stars rating={rating} />
+          <span class="text-sm text-stone-500">{rating.toFixed(1)} / 5</span>
+        </p>
+      )}
+
+      {tags.length > 0 && (
+        <div class="mt-4 flex flex-wrap gap-2">
+          {tags.map((t) => (
+            <a href={`${BASE}tags/${t}/`} class="rounded-full bg-amber-100 px-3 py-1 text-sm text-amber-800 hover:bg-amber-200">
+              #{t}
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  </div>
+
+  <div class="prose prose-amber mx-auto max-w-none">
+    <Content />
+  </div>
+</Layout>
