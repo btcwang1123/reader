@@ -5,28 +5,34 @@ import { getCollection } from 'astro:content';
 import { sortByStartedDesc } from '../../utils/books';
 
 const all = sortByStartedDesc(await getCollection('books'));
-const tags = [...new Set(all.flatMap((b) => b.data.tags))].sort((a, b) => a.localeCompare(b, 'zh-Hant'));
+const base = import.meta.env.BASE_URL;
+const tags = [...new Set(all.flatMap((b) => b.data.tags))].sort((a, b) =>
+  a.localeCompare(b, 'zh-Hant')
+);
 ---
 
 <Layout title="書庫">
-  <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="text-2xl font-bold">書庫</h1>
-      <p class="text-sm text-stone-500">共 {all.length} 本書</p>
+  <header class="mb-8">
+    <div class="flex items-center gap-3">
+      <h1 class="font-serif text-3xl font-medium text-stone-800">書庫</h1>
+      <span class="flex-1 border-t border-stone-200" aria-hidden="true"></span>
+      <span class="text-sm text-stone-400">共 {all.length} 本</span>
     </div>
-    {tags.length > 0 && (
-      <div class="flex flex-wrap gap-2">
-        {tags.map((t) => (
-          <a
-            href={`${import.meta.env.BASE_URL}tags/${t}/`}
-            class="rounded-full border border-amber-300 bg-white px-3 py-1 text-sm text-amber-800 transition hover:bg-amber-100"
-          >
-            #{t}
-          </a>
-        ))}
-      </div>
-    )}
-  </div>
+    <p class="mt-2 text-sm text-stone-500">一個收攬想讀、正在讀與已讀的架子。</p>
+  </header>
+
+  {tags.length > 0 && (
+    <div class="mb-8 flex flex-wrap gap-2">
+      {tags.map((t) => (
+        <a
+          href={`${base}tags/${t}/`}
+          class="rounded-full border border-stone-200 bg-white px-3.5 py-1.5 text-sm text-stone-600 transition hover:border-amber-300 hover:bg-amber-50 hover:text-amber-800"
+        >
+          #{t}
+        </a>
+      ))}
+    </div>
+  )}
 
   <div class="grid gap-4 md:grid-cols-2">
     {all.map((b) => (

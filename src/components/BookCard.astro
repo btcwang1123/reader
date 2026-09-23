@@ -10,42 +10,55 @@ const { book } = Astro.props;
 const { title, author, cover, status, rating, tags, finishedAt } = book.data;
 const BASE = import.meta.env.BASE_URL;
 const href = `${BASE}books/${book.id}/`;
+const statusStyle = {
+  finished: 'bg-emerald-600/10 text-emerald-700',
+  reading: 'bg-sky-600/10 text-sky-700',
+  wantToRead: 'bg-stone-200/70 text-stone-600'
+}[status];
 ---
 
 <a
   href={href}
-  class="group flex gap-4 rounded-xl border border-amber-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+  class="group relative flex gap-5 rounded-2xl border border-stone-200/80 bg-white p-5 shadow-sm ring-1 ring-white/50 transition duration-200 hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-lg hover:shadow-amber-900/5"
 >
-  {cover && (
-    <img
-      src={cover.startsWith('/') ? BASE + cover.slice(1) : cover}
-      alt={`${title} 封面`}
-      class="h-36 w-24 flex-shrink-0 rounded-md bg-amber-100 object-cover"
-    />
-  )}
-  <div class="min-w-0">
-    <h3 class="font-serif text-lg font-bold leading-snug text-stone-800 group-hover:text-amber-700">
+  <div class="flex flex-col items-center">
+    {cover ? (
+      <img
+        src={cover.startsWith('/') ? BASE + cover.slice(1) : cover}
+        alt={`${title} 封面`}
+        class="h-40 w-28 flex-shrink-0 rounded-r-lg rounded-l-sm bg-amber-100 object-cover shadow-md"
+      />
+    ) : (
+      <div class="relative flex h-40 w-28 flex-shrink-0 flex-col justify-end overflow-hidden rounded-r-lg rounded-l-sm bg-gradient-to-br from-stone-700 via-stone-800 to-stone-900 p-3 shadow-md">
+        <div class="absolute inset-y-0 left-0 w-1 bg-amber-500/80" aria-hidden="true" />
+        <span class="font-serif text-sm font-medium leading-snug text-stone-100">
+          {title}
+        </span>
+        <span class="mt-1 text-[10px] text-stone-400">{author}</span>
+      </div>
+    )}
+  </div>
+
+  <div class="flex min-w-0 flex-1 flex-col">
+    <p class="text-[11px] font-medium tracking-wider text-amber-700/80">
+      {STATUS_LABELS[status]}
+    </p>
+    <h3 class="mt-1 font-serif text-lg font-semibold leading-snug text-stone-800 transition group-hover:text-amber-800">
       {title}
     </h3>
-    <p class="mt-1 text-sm text-stone-500">{author}</p>
-    <div class="mt-2 flex flex-wrap items-center gap-2 text-xs">
-      <span
-        class:list={[
-          'rounded-full px-2 py-0.5',
-          status === 'finished' && 'bg-emerald-100 text-emerald-700',
-          status === 'reading' && 'bg-sky-100 text-sky-700',
-          status === 'wantToRead' && 'bg-stone-200 text-stone-600'
-        ]}
-      >
-        {STATUS_LABELS[status]}
-      </span>
-      {rating && <Stars rating={rating} />}
+    <p class="mt-0.5 text-sm text-stone-500">{author}</p>
+
+    <div class="mt-auto flex flex-wrap items-center gap-2 pt-3">
+      {rating ? (
+        <span class="rounded-full bg-amber-100/80 px-2 py-0.5 text-xs font-semibold text-amber-800">
+          <Stars rating={rating} />
+        </span>
+      ) : null}
       {tags.slice(0, 3).map((t) => (
-        <span class="rounded bg-amber-100 px-1.5 py-0.5 text-amber-700">{t}</span>
+        <span class="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs text-stone-500">
+          #{t}
+        </span>
       ))}
     </div>
-    {finishedAt && (
-      <p class="mt-2 text-xs text-stone-400">讀完於 {finishedAt.toISOString().slice(0, 10)}</p>
-    )}
   </div>
 </a>

@@ -15,17 +15,21 @@ export async function getStaticPaths() {
 const { tag } = Astro.props;
 const all = sortByStartedDesc(await getCollection('books'));
 const books = all.filter((b) => b.data.tags.includes(tag));
+const BASE = import.meta.env.BASE_URL;
 ---
 
 <Layout title={`#${tag}`}>
-  <nav class="mb-6 text-sm text-stone-500">
-    <a href={`${import.meta.env.BASE_URL}books/`} class="hover:text-amber-700">書庫</a>
-    <span class="mx-2">/</span>
-    <span class="text-stone-700">#{tag}</span>
+  <nav class="mb-6 text-sm text-stone-400">
+    <a href={`${BASE}books/`} class="transition hover:text-amber-700">書庫</a>
+    <span class="mx-2 text-stone-300">/</span>
+    <span class="text-stone-600">#{tag}</span>
   </nav>
 
-  <h1 class="mb-2 text-2xl font-bold">#{tag}</h1>
-  <p class="mb-6 text-sm text-stone-500">共 {books.length} 本</p>
+  <div class="mb-8 flex items-center gap-3">
+    <h1 class="font-serif text-3xl font-medium text-stone-800">#{tag}</h1>
+    <span class="flex-1 border-t border-stone-200" aria-hidden="true"></span>
+    <span class="text-sm text-stone-400">共 {books.length} 本</span>
+  </div>
 
   <div class="grid gap-4 md:grid-cols-2">
     {books.map((b) => (
