@@ -6,59 +6,96 @@ import Stars from './Stars.astro';
 interface Props {
   book: Book;
 }
+
 const { book } = Astro.props;
-const { title, author, cover, status, rating, tags, finishedAt } = book.data;
+const { title, author, cover, status, rating, tags, progress, finishedAt } = book.data;
 const BASE = import.meta.env.BASE_URL;
 const href = `${BASE}books/${book.id}/`;
 const statusStyle = {
-  finished: 'bg-emerald-600/10 text-emerald-700',
-  reading: 'bg-sky-600/10 text-sky-700',
-  wantToRead: 'bg-stone-200/70 text-stone-600'
+  finished: 'bg-emerald-50 text-emerald-700 ring-emerald-600/15',
+  reading: 'bg-sky-50 text-sky-700 ring-sky-600/15',
+  wantToRead: 'bg-stone-100 text-stone-600 ring-stone-300/60'
 }[status];
+const progressPercent = progress
+  ? Math.min(100, Math.round((progress.currentPage / progress.totalPages) * 100))
+  : 0;
+const finishedLabel = finishedAt?.toLocaleDateString('zh-TW', {
+  year: 'numeric',
+  month: 'short'
+});
 ---
 
-<a
-  href={href}
-  class="group relative flex gap-5 rounded-2xl border border-stone-200/80 bg-white p-5 shadow-sm ring-1 ring-white/50 transition duration-200 hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-lg hover:shadow-amber-900/5"
+<article
+  class="card-lift group relative flex h-full gap-4 overflow-hidden rounded-[1.35rem] border border-stone-200/80 bg-white/80 p-4 shadow-sm sm:gap-5 sm:p-5"
 >
-  <div class="flex flex-col items-center">
+  <!-- 整張卡片可點擊;標籤另外保留自己的連結 -->
+  <a
+    href={href}
+    class="absolute inset-0 z-0 rounded-[1.35rem]"
+    aria-label={`查看《${title}》的閱讀紀錄`}
+  ></a>
+
+  <div class="relative z-10 shrink-0 self-start pointer-events-none">
     {cover ? (
       <img
         src={cover.startsWith('/') ? BASE + cover.slice(1) : cover}
-        alt={`${title} 封面`}
-        class="h-40 w-28 flex-shrink-0 rounded-r-lg rounded-l-sm bg-amber-100 object-cover shadow-md"
+        alt={`${title}封面`}
+        loading="lazy"
+        class="book-cover-shadow h-36 w-24 rounded-r-lg rounded-l-[0.2rem] bg-amber-100 object-cover sm:h-40 sm:w-28"
       />
     ) : (
-      <div class="relative flex h-40 w-28 flex-shrink-0 flex-col justify-end overflow-hidden rounded-r-lg rounded-l-sm bg-gradient-to-br from-stone-700 via-stone-800 to-stone-900 p-3 shadow-md">
-        <div class="absolute inset-y-0 left-0 w-1 bg-amber-500/80" aria-hidden="true" />
-        <span class="font-serif text-sm font-medium leading-snug text-stone-100">
-          {title}
-        </span>
-        <span class="mt-1 text-[10px] text-stone-400">{author}</span>
+      <div class="book-cover-shadow relative flex h-36 w-24 flex-col justify-between overflow-hidden rounded-r-lg rounded-l-[0.2rem] bg-gradient-to-br from-stone-700 via-stone-800 to-stone-950 p-3 sm:h-40 sm:w-28">
+        <div class="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-orange-300 via-clay to-orange-800" aria-hidden="true"></div>
+        <span class="ml-1 text-[0.55rem] font-semibold uppercase tracking-[0.18em] text-stone-400">Reading notes</span>
+        <span class="ml-1 font-serif text-sm font-semibold leading-snug text-stone-100">{title}</span>
       </div>
     )}
+    <span class={`absolute -bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-2.5 py-1 text-[0.62rem] font-bold shadow-sm ring-1 ${statusStyle}`}>
+      {STATUS_LABELS[status]}
+    </span>
   </div>
 
-  <div class="flex min-w-0 flex-1 flex-col">
-    <p class="text-[11px] font-medium tracking-wider text-amber-700/80">
-      {STATUS_LABELS[status]}
-    </p>
-    <h3 class="mt-1 font-serif text-lg font-semibold leading-snug text-stone-800 transition group-hover:text-amber-800">
-      {title}
-    </h3>
-    <p class="mt-0.5 text-sm text-stone-500">{author}</p>
+  <div class="relative z-10 flex min-w-0 flex-1 flex-col py-0.5 pointer-events-none">
+    <div>
+      <h3 class="font-serif text-lg font-bold leading-snug text-stone-900 transition group-hover:text-clay sm:text-xl">
+        {title}
+      </h3>
+      <p class="mt-1 text-sm text-stone-500">{author}</p>
+    </div>
 
-    <div class="mt-auto flex flex-wrap items-center gap-2 pt-3">
+    {progress && (
+      <div class="mt-4">
+        <div class="mb-1.5 flex items-center justify-between text-[0.68rem] font-medium text-stone-500">
+          <span>讀到 {progress.currentPage} 頁</span>
+          <span>{progressPercent}%</span>
+        </div>
+        <div class="h-1.5 overflow-hidden rounded-full bg-stone-100">
+          <div class="h-full rounded-full bg-gradient-to-r from-sky-600 to-cyan-400" style={`width:${progressPercent}%`}></div>
+        </div>
+      </div>
+    )}
+
+    <div class="mt-auto flex flex-wrap items-end justify-between gap-2 pt-4">
+      <div class="flex flex-wrap gap-1.5">
+        {tags.slice(0, 2).map((tag) => (
+          <a
+            href={`${BASE}tags/${encodeURIComponent(tag)}/`}
+            class="pointer-events-auto relative z-20 rounded-full bg-stone-100/90 px-2 py-0.5 text-[0.65rem] text-stone-500 transition hover:bg-amber-100 hover:text-clay"
+            onclick={(event) => event.stopPropagation()}
+          >
+            #{tag}
+          </a>
+        ))}
+      </div>
       {rating ? (
-        <span class="rounded-full bg-amber-100/80 px-2 py-0.5 text-xs font-semibold text-amber-800">
-          <Stars rating={rating} />
-        </span>
+        <Stars rating={rating} />
+      ) : finishedLabel ? (
+        <span class="text-[0.65rem] text-stone-400">{finishedLabel}</span>
       ) : null}
-      {tags.slice(0, 3).map((t) => (
-        <span class="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs text-stone-500">
-          #{t}
-        </span>
-      ))}
     </div>
   </div>
-</a>
+
+  <span class="pointer-events-none absolute right-3 top-3 z-10 grid size-7 translate-x-2 place-items-center rounded-full bg-stone-900 text-white opacity-0 transition duration-300 group-hover:translate-x-0 group-hover:opacity-100" aria-hidden="true">
+    <svg viewBox="0 0 24 24" class="size-3.5" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6" /></svg>
+  </span>
+</article>

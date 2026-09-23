@@ -7,6 +7,7 @@ export const prerender = true;
 export async function GET(context: { site: string }) {
   const all = sortByStartedDesc(await getCollection('books'));
   const done = finished(all);
+  const BASE = import.meta.env.BASE_URL;
 
   const items = await Promise.all(
     done.map(async (b) => {
@@ -17,14 +18,14 @@ export async function GET(context: { site: string }) {
       return {
         title: `${b.data.title} — ${b.data.author}`,
         pubDate: b.data.finishedAt ?? new Date(),
-        link: `/books/${b.id}/`,
+        link: `${BASE}books/${b.id}/`,
         description: abstract
       };
     })
   );
 
   return rss({
-    title: '閱讀書架 · 新讀書心得',
+    title: '拾頁書室 · 新讀書心得',
     description: '最新完成的書本與心得',
     site: context.site,
     items

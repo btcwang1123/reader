@@ -5,25 +5,96 @@
   --font-sans: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei",
     ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
-  --color-paper: #faf6ef;
-  --color-ink: #3f3a36;
+  --color-paper: #f7f3eb;
+  --color-ink: #292722;
+  --color-clay: #a6482d;
+  --color-sage: #627260;
 }
 
-/* 粗體的中文美感補強 */
 @layer base {
-  html {
-    @apply scroll-smooth;
+  :root {
+    color-scheme: light;
+    --page-bg: #f7f3eb;
+    --page-ink: #292722;
+    --page-muted: #756f65;
+    --accent: #a6482d;
   }
+
+  html { @apply scroll-smooth; }
+
   body {
-    @apply bg-paper text-ink antialiased;
+    @apply min-h-screen bg-paper text-ink antialiased;
+    background-image:
+      radial-gradient(circle at 10% 0%, rgb(234 179 8 / 0.08), transparent 28rem),
+      radial-gradient(circle at 95% 18%, rgb(166 72 45 / 0.07), transparent 30rem),
+      linear-gradient(rgb(255 255 255 / 0.18), rgb(255 255 255 / 0.18));
     font-family: var(--font-sans);
     font-weight: 400;
   }
-  h1, h2, h3, h4, .font-serif {
-    font-family: var(--font-serif);
+
+  body::before {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    content: "";
+    opacity: 0.26;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.09'/%3E%3C/svg%3E");
   }
-  /* 心得 Markdown 標題也用襯線 */
-  .prose h1, .prose h2, .prose h3 {
-    font-family: var(--font-serif);
+
+  h1, h2, h3, h4, .font-serif { font-family: var(--font-serif); }
+  ::selection { background: #f5cda8; color: #542616; }
+  :focus-visible { outline: 2px solid #c25b38; outline-offset: 3px; }
+}
+
+@layer components {
+  .surface { @apply border border-stone-200/80 bg-white/75 shadow-sm backdrop-blur-sm; }
+  .card-lift { @apply transition duration-300 ease-out; }
+  .card-lift:hover {
+    @apply -translate-y-1 border-orange-300/80 shadow-xl;
+    box-shadow: 0 18px 45px -28px rgb(74 43 27 / 0.55);
+  }
+  .eyebrow { @apply text-[0.68rem] font-bold uppercase tracking-[0.22em] text-clay; }
+  .page-title { @apply font-serif text-4xl font-semibold leading-tight tracking-[-0.03em] text-stone-900 sm:text-5xl; }
+  .section-title { @apply font-serif text-2xl font-semibold tracking-[-0.02em] text-stone-900; }
+  .chip { @apply inline-flex items-center rounded-full border border-stone-200 bg-white/70 px-3 py-1 text-xs text-stone-600 transition; }
+  .chip:hover { @apply border-orange-300 bg-orange-50 text-clay; }
+  .book-cover-shadow {
+    box-shadow: -4px 6px 0 rgb(68 55 43 / 0.08), 0 16px 30px -18px rgb(55 37 25 / 0.65);
+  }
+}
+
+.prose {
+  --tw-prose-body: #504b44;
+  --tw-prose-headings: #292722;
+  --tw-prose-links: #a6482d;
+  --tw-prose-bold: #292722;
+  --tw-prose-quotes: #4c493f;
+  --tw-prose-quote-borders: #d97757;
+  --tw-prose-bullets: #b85a3b;
+  line-height: 1.95;
+}
+
+.prose h1, .prose h2, .prose h3 { font-family: var(--font-serif); letter-spacing: -0.02em; }
+.prose h2 { margin-top: 2.4em; padding-bottom: 0.55em; border-bottom: 1px solid rgb(214 211 209 / 0.8); }
+.prose blockquote { border-radius: 0 1rem 1rem 0; background: #fbf3e8; padding: 1.1rem 1.4rem; font-family: var(--font-serif); font-style: normal; }
+.prose code:not(pre code) { border-radius: 0.35rem; background: #eee9df; padding: 0.15rem 0.35rem; font-size: 0.85em; }
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+[hidden] { display: none !important; }
+
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.rise-in { animation: rise-in 0.55s both; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

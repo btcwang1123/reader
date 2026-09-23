@@ -6,34 +6,27 @@ import { sortByStartedDesc } from '../../utils/books';
 
 export async function getStaticPaths() {
   const all = await getCollection('books');
-  const tags = [...new Set(all.flatMap((b) => b.data.tags))].sort((a, b) =>
-    a.localeCompare(b, 'zh-Hant')
-  );
+  const tags = [...new Set(all.flatMap((book) => book.data.tags))].sort((a, b) => a.localeCompare(b, 'zh-Hant'));
   return tags.map((tag) => ({ params: { tag } }));
 }
 
-const { tag } = Astro.props;
+const { tag } = Astro.params;
 const all = sortByStartedDesc(await getCollection('books'));
-const books = all.filter((b) => b.data.tags.includes(tag));
+const books = all.filter((book) => book.data.tags.includes(tag));
 const BASE = import.meta.env.BASE_URL;
 ---
 
-<Layout title={`#${tag}`}>
-  <nav class="mb-6 text-sm text-stone-400">
-    <a href={`${BASE}books/`} class="transition hover:text-amber-700">書庫</a>
-    <span class="mx-2 text-stone-300">/</span>
-    <span class="text-stone-600">#{tag}</span>
+<Layout title={`#${tag}`} description={`瀏覽標記為${tag}的閱讀紀錄。`}>
+  <nav class="mb-8 flex items-center gap-2 text-sm text-stone-400" aria-label="麵包屑">
+    <a href={`${BASE}books/`} class="transition hover:text-clay">書庫</a><span aria-hidden="true">/</span><span class="text-stone-600">#{tag}</span>
   </nav>
 
-  <div class="mb-8 flex items-center gap-3">
-    <h1 class="font-serif text-3xl font-medium text-stone-800">#{tag}</h1>
-    <span class="flex-1 border-t border-stone-200" aria-hidden="true"></span>
-    <span class="text-sm text-stone-400">共 {books.length} 本</span>
-  </div>
+  <header class="mb-9 flex flex-col gap-4 border-b border-stone-200 pb-8 sm:flex-row sm:items-end sm:justify-between">
+    <div><p class="eyebrow">Browse by topic</p><h1 class="page-title mt-3">#{tag}</h1></div>
+    <p class="text-sm text-stone-500">這個主題收藏了 <strong class="font-semibold text-stone-800">{books.length}</strong> 本書</p>
+  </header>
 
-  <div class="grid gap-4 md:grid-cols-2">
-    {books.map((b) => (
-      <BookCard book={b} />
-    ))}
-  </div>
+  <div class="grid gap-5 md:grid-cols-2">{books.map((book) => <BookCard book={book} />)}</div>
+
+  <a href={`${BASE}books/`} class="mt-10 inline-flex items-center gap-2 text-sm font-medium text-stone-500 transition hover:text-clay"><span aria-hidden="true">←</span> 回到完整書庫</a>
 </Layout>

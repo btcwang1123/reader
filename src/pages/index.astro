@@ -5,80 +5,160 @@ import { getCollection } from 'astro:content';
 import { sortByStartedDesc } from '../utils/books';
 
 const all = sortByStartedDesc(await getCollection('books'));
-const finishedBooks = all.filter((b) => b.data.status === 'finished');
-const readingBooks = all.filter((b) => b.data.status === 'reading');
-
+const finishedBooks = all.filter((book) => book.data.status === 'finished');
+const readingBooks = all.filter((book) => book.data.status === 'reading');
+const wantToReadBooks = all.filter((book) => book.data.status === 'wantToRead');
 const currentYear = new Date().getFullYear();
 const finishedThisYear = finishedBooks.filter(
-  (b) => b.data.finishedAt?.getFullYear() === currentYear
+  (book) => book.data.finishedAt?.getFullYear() === currentYear
 );
-const totalPages = finishedBooks.reduce(
-  (sum, b) => sum + (b.data.progress?.totalPages ?? 0),
-  0
-);
-const avgRating = finishedBooks.length
-  ? finishedBooks.reduce((s, b) => s + (b.data.rating ?? 0), 0) / finishedBooks.length
-  : 0;
+const totalMinutes = finishedBooks.reduce((sum, book) => sum + (book.data.readingMinutes ?? 0), 0);
+const BASE = import.meta.env.BASE_URL;
+
+const tagCounts = new Map<string, number>();
+for (const book of all) {
+  for (const tag of book.data.tags) tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
+}
+const popularTags = [...tagCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
 
 const statCards = [
-  { label: '累積已讀', value: String(finishedBooks.length), unit: '本' },
-  { label: `${currentYear} 年已讀`, value: String(finishedThisYear.length), unit: '本' },
-  { label: '平均評分', value: avgRating ? avgRating.toFixed(1) : '—', unit: '/ 5' },
-  { label: '累積頁數', value: totalPages ? totalPages.toLocaleString() : '—', unit: '頁' }
+  { label: '書架收藏', value: String(all.length).padStart(2, '0'), unit: '本' },
+  { label: '正在閱讀', value: String(readingBooks.length).padStart(2, '0'), unit: '本' },
+  { label: `${currentYear} 讀完`, value: String(finishedThisYear.length).padStart(2, '0'), unit: '本' },
+  { label: '閱讀時光', value: totalMinutes ? (totalMinutes / 60).toFixed(0) : '0', unit: '小時' }
 ];
+
+const pickOptions = wantToReadBooks.map((book) => ({
+  title: book.data.title,
+  author: book.data.author,
+  tags: book.data.tags.join('・') || '待讀清單',
+  href: `${BASE}books/${book.id}/`
+}));
+const firstPick = pickOptions[0];
 ---
 
 <Layout>
-  <!-- 書卷風首頁引言 -->
-  <section class="mb-10 text-center">
-    <p class="mx-auto mb-3 h-px w-24 bg-amber-300" aria-hidden="true"></p>
-    <h1 class="font-serif text-3xl font-medium tracking-wide text-stone-800 sm:text-4xl">
-      一方安放讀過的書的角落
-    </h1>
-    <p class="mx-auto mt-4 max-w-md text-sm leading-relaxed text-stone-500">
-      我讀過的書、寫下的心得,與捨不得忘了的句子。
-    </p>
-    <p class="mx-auto mt-6 h-px w-24 bg-amber-300" aria-hidden="true"></p>
-  </section>
+  <section class="relative mb-16 overflow-hidden rounded-[2rem] bg-stone-900 px-6 py-10 text-white shadow-2xl shadow-stone-900/10 sm:px-10 sm:py-14 lg:px-14">
+    <div class="absolute inset-0 opacity-40" aria-hidden="true" style="background-image:radial-gradient(circle at 80% 15%,rgba(238,166,109,.38),transparent 28%),linear-gradient(115deg,transparent 50%,rgba(255,255,255,.04) 50%)"></div>
+    <div class="absolute -bottom-16 -right-10 size-56 rounded-full border border-white/10" aria-hidden="true"></div>
+    <div class="absolute -bottom-8 right-3 size-40 rounded-full border border-white/10" aria-hidden="true"></div>
 
-  <!-- 統計亮點 -->
-  <section class="mb-12 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-    {statCards.map((s) => (
-      <div class="rounded-2xl border border-stone-200/80 bg-white/70 px-4 py-5 text-center shadow-sm backdrop-blur">
-        <div class="font-serif text-3xl font-semibold text-stone-800">
-          {s.value}
-          <span class="ml-1 text-sm font-normal text-stone-400">{s.unit}</span>
+    <div class="relative grid items-end gap-10 lg:grid-cols-[1.35fr_0.9fr]">
+      <div class="rise-in">
+        <p class="text-[0.68rem] font-bold uppercase tracking-[0.24em] text-orange-300">A personal reading journal</p>
+        <h1 class="mt-5 max-w-2xl font-serif text-4xl font-semibold leading-[1.22] tracking-[-0.035em] text-stone-50 sm:text-6xl">
+          有些書讀完了，<br class="hidden sm:block" />仍在生活裡翻頁。
+        </h1>
+        <p class="mt-6 max-w-xl text-sm leading-7 text-stone-300 sm:text-base">
+          收藏讀過的書、沿途的想法，以及那些捨不得忘記的句子。這裡不是清單，是一段段閱讀生活的切片。
+        </p>
+        <div class="mt-8 flex flex-wrap gap-3">
+          <a href={`${BASE}books/`} class="inline-flex items-center gap-2 rounded-full bg-orange-200 px-5 py-2.5 text-sm font-bold text-stone-900 transition hover:bg-white">
+            走進書庫
+            <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6" /></svg>
+          </a>
+          <a href={`${BASE}stats/`} class="rounded-full border border-white/15 px-5 py-2.5 text-sm font-medium text-stone-200 transition hover:border-white/40 hover:bg-white/10">看看閱讀足跡</a>
         </div>
-        <div class="mt-1 text-xs tracking-wide text-stone-500">{s.label}</div>
       </div>
-    ))}
+
+      <div class="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10">
+        {statCards.map((stat) => (
+          <div class="bg-stone-900/60 p-5 backdrop-blur-sm sm:p-6">
+            <p class="font-serif text-3xl font-semibold tabular-nums text-white sm:text-4xl">
+              {stat.value}<span class="ml-1.5 text-xs font-normal text-stone-400">{stat.unit}</span>
+            </p>
+            <p class="mt-2 text-xs tracking-wide text-stone-400">{stat.label}</p>
+          </div>
+        ))}
+      </div>
+    </div>
   </section>
 
   {readingBooks.length > 0 && (
-    <section class="mb-12">
-      <div class="mb-4 flex items-center gap-3">
-        <h2 class="font-serif text-xl font-medium text-stone-800">正在讀</h2>
-        <span class="flex-1 border-t border-stone-200" aria-hidden="true"></span>
+    <section class="mb-16">
+      <div class="mb-6 flex items-end justify-between gap-4">
+        <div>
+          <p class="eyebrow">On the nightstand</p>
+          <h2 class="section-title mt-2">此刻正在讀</h2>
+        </div>
+        <a href={`${BASE}books/?status=reading`} class="hidden items-center gap-1 text-sm font-medium text-stone-500 transition hover:text-clay sm:flex">
+          查看全部 <span aria-hidden="true">→</span>
+        </a>
       </div>
-      <div class="grid gap-4">
-        {readingBooks.map((b) => (
-          <BookCard book={b} />
-        ))}
+      <div class="grid gap-5 md:grid-cols-2">
+        {readingBooks.map((book) => <BookCard book={book} />)}
       </div>
     </section>
   )}
 
   {finishedBooks.length > 0 && (
-    <section class="mb-12">
-      <div class="mb-4 flex items-center gap-3">
-        <h2 class="font-serif text-xl font-medium text-stone-800">最近讀完</h2>
-        <span class="flex-1 border-t border-stone-200" aria-hidden="true"></span>
+    <section class="mb-16">
+      <div class="mb-6 flex items-end justify-between gap-4">
+        <div>
+          <p class="eyebrow">Recently finished</p>
+          <h2 class="section-title mt-2">最近讀完</h2>
+        </div>
+        <a href={`${BASE}books/?status=finished`} class="flex items-center gap-1 text-sm font-medium text-stone-500 transition hover:text-clay">
+          全部紀錄 <span aria-hidden="true">→</span>
+        </a>
       </div>
-      <div class="grid gap-4">
-        {finishedBooks.slice(0, 5).map((b) => (
-          <BookCard book={b} />
-        ))}
+      <div class="grid gap-5 md:grid-cols-2">
+        {finishedBooks.slice(0, 4).map((book) => <BookCard book={book} />)}
       </div>
     </section>
   )}
+
+  <section class="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
+    <div class="surface relative overflow-hidden rounded-[1.6rem] p-6 sm:p-8" data-book-picker>
+      <div class="absolute -right-10 -top-12 size-40 rounded-full bg-orange-100/70" aria-hidden="true"></div>
+      <div class="relative">
+        <p class="eyebrow">Next read</p>
+        <h2 class="mt-2 font-serif text-2xl font-semibold text-stone-900">下一本讀什麼？</h2>
+        {firstPick ? (
+          <>
+            <div class="mt-7 border-l-2 border-orange-300 pl-5">
+              <p class="font-serif text-2xl font-bold text-stone-900" data-pick-title>{firstPick.title}</p>
+              <p class="mt-1 text-sm text-stone-500"><span data-pick-author>{firstPick.author}</span> · <span data-pick-tags>{firstPick.tags}</span></p>
+            </div>
+            <div class="mt-7 flex flex-wrap gap-3">
+              <a href={firstPick.href} data-pick-link class="rounded-full bg-stone-900 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-clay">就讀這本</a>
+              <button type="button" data-pick-again class="rounded-full border border-stone-300 bg-white px-5 py-2.5 text-sm font-medium text-stone-700 transition hover:border-orange-300 hover:text-clay">再抽一次</button>
+            </div>
+          </>
+        ) : (
+          <p class="mt-6 text-sm leading-7 text-stone-500">待讀清單還是空的。下次遇見想讀的書，先替未來的自己收進書架吧。</p>
+        )}
+      </div>
+    </div>
+
+    <div class="rounded-[1.6rem] bg-[#d9e0d4] p-6 sm:p-8">
+      <p class="eyebrow !text-sage">Browse the shelf</p>
+      <h2 class="mt-2 font-serif text-2xl font-semibold text-stone-900">從主題開始逛</h2>
+      <div class="mt-6 flex flex-wrap gap-2.5">
+        {popularTags.length > 0 ? popularTags.map(([tag, count]) => (
+          <a href={`${BASE}tags/${encodeURIComponent(tag)}/`} class="rounded-full border border-white/60 bg-white/55 px-4 py-2 text-sm text-stone-700 transition hover:-translate-y-0.5 hover:bg-white">
+            #{tag} <span class="ml-1 text-xs text-stone-400">{count}</span>
+          </a>
+        )) : <span class="text-sm text-stone-500">加入標籤後，就能從主題探索書架。</span>}
+      </div>
+    </div>
+  </section>
+
+  <script define:vars={{ pickOptions }}>
+    const picker = document.querySelector('[data-book-picker]');
+    const button = picker?.querySelector('[data-pick-again]');
+    let previousIndex = 0;
+
+    button?.addEventListener('click', () => {
+      if (!pickOptions.length) return;
+      let index = Math.floor(Math.random() * pickOptions.length);
+      if (pickOptions.length > 1 && index === previousIndex) index = (index + 1) % pickOptions.length;
+      previousIndex = index;
+      const pick = pickOptions[index];
+      picker.querySelector('[data-pick-title]').textContent = pick.title;
+      picker.querySelector('[data-pick-author]').textContent = pick.author;
+      picker.querySelector('[data-pick-tags]').textContent = pick.tags;
+      picker.querySelector('[data-pick-link]').href = pick.href;
+    });
+  </script>
 </Layout>

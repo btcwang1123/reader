@@ -3,6 +3,8 @@ import { getCollection } from 'astro:content';
 /** 產生可供備份/匯出的完整書籍資料 */
 export async function getExportData() {
   const all = await getCollection('books');
+  // SITE 已包含 base 路徑,再接上頁面路徑即可(不要重複加 BASE_URL)
+  const site = (import.meta.env.SITE ?? '').replace(/\/$/, '');
   const BASE = import.meta.env.BASE_URL;
 
   return {
@@ -22,7 +24,7 @@ export async function getExportData() {
       progress: b.data.progress,
       readingMinutes: b.data.readingMinutes,
       tags: b.data.tags,
-      url: `${import.meta.env.SITE ?? ''}${BASE}books/${b.id}/`
+      url: site ? `${site}/books/${b.id}/` : `${BASE}books/${b.id}/`
     }))
   };
 }

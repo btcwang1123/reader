@@ -1,12 +1,19 @@
 ---
-import { starString } from '../utils/books';
-
 interface Props {
   rating: number;
+  showValue?: boolean;
 }
-const { rating } = Astro.props;
+
+const { rating, showValue = false } = Astro.props;
+const width = `${Math.max(0, Math.min(100, (rating / 5) * 100))}%`;
 ---
 
-<span class="text-amber-500" aria-label={`${rating} 顆星`}>
-  {starString(rating)}
+<span class="inline-flex items-center gap-2" role="img" aria-label={`${rating} 顆星（滿分 5 顆）`}>
+  <span class="relative inline-block whitespace-nowrap tracking-[0.12em] text-stone-200" aria-hidden="true">
+    ★★★★★
+    <span class="absolute inset-y-0 left-0 overflow-hidden whitespace-nowrap text-amber-500" style={`width:${width}`}>
+      ★★★★★
+    </span>
+  </span>
+  {showValue && <span class="text-xs font-semibold tabular-nums text-stone-500">{rating.toFixed(1)}</span>}
 </span>

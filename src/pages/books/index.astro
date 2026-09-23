@@ -2,41 +2,231 @@
 import Layout from '../../layouts/Layout.astro';
 import BookCard from '../../components/BookCard.astro';
 import { getCollection } from 'astro:content';
-import { sortByStartedDesc } from '../../utils/books';
+import { sortByStartedDesc, STATUS_LABELS } from '../../utils/books';
 
 const all = sortByStartedDesc(await getCollection('books'));
-const base = import.meta.env.BASE_URL;
-const tags = [...new Set(all.flatMap((b) => b.data.tags))].sort((a, b) =>
+const tags = [...new Set(all.flatMap((book) => book.data.tags))].sort((a, b) =>
   a.localeCompare(b, 'zh-Hant')
 );
+const statuses = ['all', 'reading', 'wantToRead', 'finished'] as const;
+const statusCounts = {
+  all: all.length,
+  reading: all.filter((book) => book.data.status === 'reading').length,
+  wantToRead: all.filter((book) => book.data.status === 'wantToRead').length,
+  finished: all.filter((book) => book.data.status === 'finished').length
+};
 ---
 
-<Layout title="書庫">
-  <header class="mb-8">
-    <div class="flex items-center gap-3">
-      <h1 class="font-serif text-3xl font-medium text-stone-800">書庫</h1>
-      <span class="flex-1 border-t border-stone-200" aria-hidden="true"></span>
-      <span class="text-sm text-stone-400">共 {all.length} 本</span>
-    </div>
-    <p class="mt-2 text-sm text-stone-500">一個收攬想讀、正在讀與已讀的架子。</p>
-  </header>
+<Layout title="書庫" description="搜尋、篩選並瀏覽書架裡的每一本書。">
+  <section data-library>
+    <header class="mb-9 grid gap-5 md:grid-cols-[1fr_auto] md:items-end">
+      <div>
+        <p class="eyebrow">The collection</p>
+        <h1 class="page-title mt-3">我的書庫</h1>
+        <p class="mt-4 max-w-xl text-sm leading-7 text-stone-500">
+          從書名、作者或標籤找一本書，也可以依閱讀狀態與評分慢慢翻找。
+        </p>
+      </div>
+      <p class="font-serif text-lg text-stone-500"><strong class="text-3xl text-stone-900">{all.length}</strong> 本藏書</p>
+    </header>
 
-  {tags.length > 0 && (
-    <div class="mb-8 flex flex-wrap gap-2">
-      {tags.map((t) => (
-        <a
-          href={`${base}tags/${t}/`}
-          class="rounded-full border border-stone-200 bg-white px-3.5 py-1.5 text-sm text-stone-600 transition hover:border-amber-300 hover:bg-amber-50 hover:text-amber-800"
+    <div class="surface mb-8 rounded-[1.5rem] p-4 sm:p-5">
+      <div class="grid gap-3 lg:grid-cols-[minmax(16rem,1fr)_auto]">
+        <label class="relative block">
+          <span class="sr-only">搜尋書名、作者或標籤</span>
+          <svg viewBox="0 0 24 24" class="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-stone-400" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path>
+          </svg>
+          <input
+            type="search"
+            data-search
+            autocomplete="off"
+            placeholder="搜尋書名、作者或標籤…"
+            class="w-full rounded-xl border border-stone-200 bg-white py-3 pl-12 pr-14 text-sm text-stone-800 shadow-inner shadow-stone-100 outline-none transition placeholder:text-stone-400 focus:border-orange-300 focus:ring-4 focus:ring-orange-100/60"
+          />
+          <kbd class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 rounded border border-stone-200 bg-stone-50 px-1.5 py-0.5 text-[0.65rem] text-stone-400">/</kbd>
+        </label>
+
+        <div class="flex flex-wrap gap-2" role="group" aria-label="閱讀狀態">
+          {statuses.map((status) => (
+            <button
+              type="button"
+              data-status-filter={status}
+              aria-pressed={status === 'all' ? 'true' : 'false'}
+              class:list={[
+                'rounded-xl px-3.5 py-2.5 text-sm font-medium transition',
+                status === 'all' ? 'bg-stone-900 text-white shadow-sm' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+              ]}
+            >
+              {status === 'all' ? '全部' : STATUS_LABELS[status]}
+              <span class:list={['ml-1 text-xs', status === 'all' ? 'text-stone-300' : 'text-stone-400']}>{statusCounts[status]}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div class="mt-4 grid gap-3 border-t border-stone-100 pt-4 sm:grid-cols-3">
+        <label>
+          <span class="mb-1.5 block text-[0.65rem] font-bold uppercase tracking-wider text-stone-400">標籤</span>
+          <select data-tag-filter class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-700 outline-none focus:border-orange-300">
+            <option value="all">所有標籤</option>
+            {tags.map((tag) => <option value={tag}>#{tag}</option>)}
+          </select>
+        </label>
+        <label>
+          <span class="mb-1.5 block text-[0.65rem] font-bold uppercase tracking-wider text-stone-400">最低評分</span>
+          <select data-rating-filter class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-700 outline-none focus:border-orange-300">
+            <option value="0">不限評分</option>
+            <option value="4.5">4.5 星以上</option>
+            <option value="4">4 星以上</option>
+            <option value="3">3 星以上</option>
+          </select>
+        </label>
+        <label>
+          <span class="mb-1.5 block text-[0.65rem] font-bold uppercase tracking-wider text-stone-400">排序方式</span>
+          <select data-sort class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-700 outline-none focus:border-orange-300">
+            <option value="recent">最近加入</option>
+            <option value="finished">最近讀完</option>
+            <option value="rating">評分最高</option>
+            <option value="title">書名筆畫</option>
+          </select>
+        </label>
+      </div>
+    </div>
+
+    <div class="mb-5 flex items-center justify-between gap-4 text-sm">
+      <p class="text-stone-500" aria-live="polite">
+        顯示 <strong data-visible-count class="font-semibold text-stone-800">{all.length}</strong> / {all.length} 本
+      </p>
+      <button type="button" data-clear hidden class="text-sm font-medium text-clay underline decoration-orange-200 underline-offset-4 hover:decoration-clay">清除所有條件</button>
+    </div>
+
+    <div id="book-grid" data-book-grid class="grid gap-5 md:grid-cols-2">
+      {all.map((book, index) => (
+        <article
+          data-book
+          data-original-index={index}
+          data-search={`${book.data.title} ${book.data.author} ${book.data.tags.join(' ')}`.toLocaleLowerCase('zh-Hant')}
+          data-status={book.data.status}
+          data-tags={book.data.tags.join('|')}
+          data-rating={book.data.rating ?? 0}
+          data-started={book.data.startedAt?.getTime() ?? 0}
+          data-finished={book.data.finishedAt?.getTime() ?? 0}
+          data-title={book.data.title}
         >
-          #{t}
-        </a>
+          <BookCard book={book} />
+        </article>
       ))}
     </div>
-  )}
 
-  <div class="grid gap-4 md:grid-cols-2">
-    {all.map((b) => (
-      <BookCard book={b} />
-    ))}
-  </div>
+    <div data-empty hidden class="surface rounded-[1.5rem] px-6 py-16 text-center">
+      <span class="mx-auto grid size-12 place-items-center rounded-full bg-stone-100 text-stone-400" aria-hidden="true">
+        <svg viewBox="0 0 24 24" class="size-6" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
+      </span>
+      <h2 class="mt-4 font-serif text-xl font-semibold text-stone-800">書架上沒有符合的書</h2>
+      <p class="mt-2 text-sm text-stone-500">換個關鍵字，或放寬篩選條件再試試看。</p>
+    </div>
+  </section>
+
+  <script>
+    const root = document.querySelector<HTMLElement>('[data-library]');
+
+    if (root) {
+      const search = root.querySelector<HTMLInputElement>('[data-search]')!;
+      const tagFilter = root.querySelector<HTMLSelectElement>('[data-tag-filter]')!;
+      const ratingFilter = root.querySelector<HTMLSelectElement>('[data-rating-filter]')!;
+      const sortSelect = root.querySelector<HTMLSelectElement>('[data-sort]')!;
+      const grid = root.querySelector<HTMLElement>('[data-book-grid]')!;
+      const cards = [...root.querySelectorAll<HTMLElement>('[data-book]')];
+      const statusButtons = [...root.querySelectorAll<HTMLButtonElement>('[data-status-filter]')];
+      const count = root.querySelector<HTMLElement>('[data-visible-count]')!;
+      const empty = root.querySelector<HTMLElement>('[data-empty]')!;
+      const clear = root.querySelector<HTMLButtonElement>('[data-clear]')!;
+      const params = new URLSearchParams(window.location.search);
+      let status = params.get('status') ?? 'all';
+
+      search.value = params.get('q') ?? '';
+      if ([...tagFilter.options].some((option) => option.value === params.get('tag'))) tagFilter.value = params.get('tag')!;
+      if ([...ratingFilter.options].some((option) => option.value === params.get('rating'))) ratingFilter.value = params.get('rating')!;
+      if ([...sortSelect.options].some((option) => option.value === params.get('sort'))) sortSelect.value = params.get('sort')!;
+      if (!statusButtons.some((button) => button.dataset.statusFilter === status)) status = 'all';
+
+      const number = (card: HTMLElement, key: string) => Number(card.dataset[key] ?? 0);
+
+      function applyFilters() {
+        const query = search.value.trim().toLocaleLowerCase('zh-Hant');
+        const tag = tagFilter.value;
+        const minimumRating = Number(ratingFilter.value);
+
+        const sorted = [...cards].sort((a, b) => {
+          if (sortSelect.value === 'rating') return number(b, 'rating') - number(a, 'rating');
+          if (sortSelect.value === 'finished') return number(b, 'finished') - number(a, 'finished');
+          if (sortSelect.value === 'title') return (a.dataset.title ?? '').localeCompare(b.dataset.title ?? '', 'zh-Hant');
+          return number(b, 'started') - number(a, 'started');
+        });
+
+        let visible = 0;
+        for (const card of sorted) {
+          const matchesQuery = !query || card.dataset.search?.includes(query);
+          const matchesStatus = status === 'all' || card.dataset.status === status;
+          const matchesTag = tag === 'all' || card.dataset.tags?.split('|').includes(tag);
+          const matchesRating = !minimumRating || number(card, 'rating') >= minimumRating;
+          card.hidden = !(matchesQuery && matchesStatus && matchesTag && matchesRating);
+          if (!card.hidden) visible += 1;
+          grid.append(card);
+        }
+
+        for (const button of statusButtons) {
+          const active = button.dataset.statusFilter === status;
+          button.setAttribute('aria-pressed', String(active));
+          button.classList.toggle('bg-stone-900', active);
+          button.classList.toggle('text-white', active);
+          button.classList.toggle('shadow-sm', active);
+          button.classList.toggle('bg-stone-100', !active);
+          button.classList.toggle('text-stone-600', !active);
+        }
+
+        count.textContent = String(visible);
+        empty.hidden = visible !== 0;
+        grid.hidden = visible === 0;
+        const hasFilters = Boolean(query || status !== 'all' || tag !== 'all' || minimumRating || sortSelect.value !== 'recent');
+        clear.hidden = !hasFilters;
+
+        const next = new URLSearchParams();
+        if (query) next.set('q', search.value.trim());
+        if (status !== 'all') next.set('status', status);
+        if (tag !== 'all') next.set('tag', tag);
+        if (minimumRating) next.set('rating', ratingFilter.value);
+        if (sortSelect.value !== 'recent') next.set('sort', sortSelect.value);
+        const queryString = next.toString();
+        history.replaceState(null, '', `${location.pathname}${queryString ? `?${queryString}` : ''}`);
+      }
+
+      statusButtons.forEach((button) => button.addEventListener('click', () => {
+        status = button.dataset.statusFilter ?? 'all';
+        applyFilters();
+      }));
+      search.addEventListener('input', applyFilters);
+      tagFilter.addEventListener('change', applyFilters);
+      ratingFilter.addEventListener('change', applyFilters);
+      sortSelect.addEventListener('change', applyFilters);
+      clear.addEventListener('click', () => {
+        search.value = '';
+        status = 'all';
+        tagFilter.value = 'all';
+        ratingFilter.value = '0';
+        sortSelect.value = 'recent';
+        applyFilters();
+        search.focus();
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key === '/' && document.activeElement !== search) {
+          event.preventDefault();
+          search.focus();
+        }
+      });
+
+      applyFilters();
+    }
+  </script>
 </Layout>

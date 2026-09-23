@@ -1,154 +1,173 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import Stars from '../components/Stars.astro';
 import { getCollection } from 'astro:content';
 import { finished } from '../utils/books';
 
 const all = await getCollection('books');
 const done = finished(all);
-
+const currentYear = new Date().getFullYear();
 const totalFinished = done.length;
-const totalPages = done.reduce((s, b) => s + (b.data.progress?.totalPages ?? 0), 0);
-const totalMinutes = done.reduce((s, b) => s + (b.data.readingMinutes ?? 0), 0);
-const rated = done.filter((b) => b.data.rating);
+const totalPages = done.reduce((sum, book) => sum + (book.data.progress?.totalPages ?? 0), 0);
+const totalMinutes = done.reduce((sum, book) => sum + (book.data.readingMinutes ?? 0), 0);
+const rated = done.filter((book) => book.data.rating);
 const avgRating = rated.length
-  ? rated.reduce((s, b) => s + (b.data.rating!), 0) / rated.length
+  ? rated.reduce((sum, book) => sum + (book.data.rating ?? 0), 0) / rated.length
   : 0;
 
 const years = new Map<number, number>();
-for (const b of done) {
-  const y = b.data.finishedAt?.getFullYear();
-  if (y) years.set(y, (years.get(y) ?? 0) + 1);
+for (const book of done) {
+  const year = book.data.finishedAt?.getFullYear();
+  if (year) years.set(year, (years.get(year) ?? 0) + 1);
 }
 const perYear = [...years.entries()].sort((a, b) => a[0] - b[0]);
+const maxYearCount = Math.max(...perYear.map(([, count]) => count), 1);
 
-const dist = [5, 4.5, 4, 3.5, 3, 2.5, 2, 1.5, 1].map((r) => ({
-  rating: r,
-  count: rated.filter((b) => b.data.rating === r).length
+const months = Array.from({ length: 12 }, (_, index) => ({
+  label: `${index + 1}月`,
+  count: done.filter((book) =>
+    book.data.finishedAt?.getFullYear() === currentYear && book.data.finishedAt.getMonth() === index
+  ).length
 }));
+const maxMonthCount = Math.max(...months.map(({ count }) => count), 1);
+
+const distribution = [5, 4.5, 4, 3.5, 3, 2.5, 2, 1.5, 1].map((rating) => ({
+  rating,
+  count: rated.filter((book) => book.data.rating === rating).length
+}));
+const maxRatingCount = Math.max(...distribution.map(({ count }) => count), 1);
 
 const authors = new Map<string, number>();
-for (const b of done) authors.set(b.data.author, (authors.get(b.data.author) ?? 0) + 1);
-const topAuthors = [...authors.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
+for (const book of done) authors.set(book.data.author, (authors.get(book.data.author) ?? 0) + 1);
+const topAuthors = [...authors.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
 
 const tagCounts = new Map<string, number>();
-for (const b of done) for (const t of b.data.tags) tagCounts.set(t, (tagCounts.get(t) ?? 0) + 1);
+for (const book of done) {
+  for (const tag of book.data.tags) tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
+}
 const topTags = [...tagCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
-
-const maxCount = Math.max(...perYear.map(([, c]) => c), 1);
-const maxDist = Math.max(...dist.map((d) => d.count), 1);
+const highestRated = [...rated].sort((a, b) => (b.data.rating ?? 0) - (a.data.rating ?? 0))[0];
+const BASE = import.meta.env.BASE_URL;
 
 const overview = [
-  { label: '累積已讀', value: String(totalFinished), unit: '本' },
-  { label: '累積頁數', value: totalPages.toLocaleString(), unit: '頁' },
-  { label: '平均評分', value: avgRating ? avgRating.toFixed(1) : '—', unit: '/5' },
-  { label: '閱讀時數', value: (totalMinutes / 60).toFixed(1), unit: 'hr' }
+  { label: '累積讀完', value: String(totalFinished).padStart(2, '0'), unit: '本', accent: 'bg-orange-100 text-clay' },
+  { label: '累積頁數', value: totalPages.toLocaleString(), unit: '頁', accent: 'bg-sky-100 text-sky-700' },
+  { label: '平均評分', value: avgRating ? avgRating.toFixed(1) : '—', unit: '/ 5', accent: 'bg-amber-100 text-amber-700' },
+  { label: '閱讀時光', value: (totalMinutes / 60).toFixed(1), unit: '小時', accent: 'bg-emerald-100 text-emerald-700' }
 ];
 ---
 
-<Layout title="統計">
-  <div class="mb-8 flex items-center gap-3">
-    <h1 class="font-serif text-3xl font-medium text-stone-800">閱讀統計</h1>
-    <span class="flex-1 border-t border-stone-200" aria-hidden="true"></span>
-  </div>
+<Layout title="閱讀足跡" description="用數字回看一路累積的閱讀足跡。">
+  <header class="mb-10 grid gap-4 md:grid-cols-[1fr_auto] md:items-end">
+    <div>
+      <p class="eyebrow">Reading in numbers</p>
+      <h1 class="page-title mt-3">閱讀足跡</h1>
+      <p class="mt-4 max-w-xl text-sm leading-7 text-stone-500">數字不是閱讀的目的，卻能讓一路走過的痕跡慢慢浮現。</p>
+    </div>
+    <p class="text-sm text-stone-400">資料更新至 {new Date().toLocaleDateString('zh-TW')}</p>
+  </header>
 
-  <section class="mb-12 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-    {overview.map((s) => (
-      <div class="rounded-2xl border border-stone-200/80 bg-white/70 px-4 py-6 text-center shadow-sm">
-        <div class="font-serif text-3xl font-semibold text-stone-800">{s.value}</div>
-        <div class="mt-1 text-sm text-stone-500">{s.label}</div>
-        <div class="mt-1 text-xs text-stone-400">{s.unit}</div>
+  <section class="mb-10 grid grid-cols-2 gap-3 lg:grid-cols-4">
+    {overview.map((stat) => (
+      <div class="surface rounded-[1.4rem] p-5 sm:p-6">
+        <span class={`grid size-8 place-items-center rounded-lg text-sm ${stat.accent}`} aria-hidden="true">＋</span>
+        <p class="mt-5 font-serif text-3xl font-semibold tabular-nums text-stone-900 sm:text-4xl">
+          {stat.value}<span class="ml-1.5 text-xs font-normal text-stone-400">{stat.unit}</span>
+        </p>
+        <p class="mt-1.5 text-xs tracking-wide text-stone-500">{stat.label}</p>
       </div>
     ))}
   </section>
 
-  <section class="mb-12">
-    <div class="mb-4 flex items-center gap-3">
-      <h2 class="font-serif text-xl font-medium text-stone-800">每年已讀本數</h2>
-      <span class="flex-1 border-t border-stone-200" aria-hidden="true"></span>
-    </div>
-    {perYear.length > 0 ? (
-      <div class="flex items-end gap-4 rounded-2xl border border-stone-200/80 bg-white p-6 shadow-sm">
-        {perYear.map(([year, count]) => (
-          <div class="flex flex-1 flex-col items-center gap-2">
-            <span class="text-xs text-stone-500">{count}</span>
-            <div
-              class="w-full rounded-t-lg bg-gradient-to-t from-amber-500 to-amber-300 transition-all hover:to-amber-400"
-              style={`height:${Math.max((count / maxCount) * 120, 8)}px`}
-              title={`${year}:共 ${count} 本`}
-            />
-            <span class="text-xs text-stone-500">{year}</span>
-          </div>
-        ))}
+  <section class="mb-10 grid gap-5 lg:grid-cols-[1.35fr_0.65fr]">
+    <div class="surface rounded-[1.6rem] p-5 sm:p-7">
+      <div class="flex items-center justify-between">
+        <div><p class="eyebrow">Annual rhythm</p><h2 class="mt-2 font-serif text-xl font-semibold text-stone-900">每年讀完</h2></div>
+        <span class="text-xs text-stone-400">單位：本</span>
       </div>
-    ) : (
-      <p class="text-stone-500">還沒有已讀紀錄。</p>
-    )}
+      {perYear.length > 0 ? (
+        <div class="mt-8 flex h-48 items-end gap-5 border-b border-stone-200 px-2 sm:gap-8">
+          {perYear.map(([year, count]) => (
+            <div class="group flex h-full flex-1 flex-col items-center justify-end gap-2">
+              <span class="text-xs font-semibold tabular-nums text-stone-500">{count}</span>
+              <div class="w-full max-w-20 rounded-t-xl bg-gradient-to-t from-clay to-orange-300 transition group-hover:brightness-105" style={`height:${Math.max((count / maxYearCount) * 140, 10)}px`}></div>
+              <span class="-mb-6 text-xs text-stone-500">{year}</span>
+            </div>
+          ))}
+        </div>
+      ) : <p class="mt-8 text-sm text-stone-500">讀完第一本書後，年度足跡會從這裡開始。</p>}
+      <div class="h-6"></div>
+    </div>
+
+    <div class="rounded-[1.6rem] bg-stone-900 p-6 text-white sm:p-7">
+      <p class="text-[0.68rem] font-bold uppercase tracking-[0.2em] text-orange-300">A small insight</p>
+      {highestRated ? (
+        <>
+          <p class="mt-6 text-xs text-stone-400">目前最高評分</p>
+          <a href={`${BASE}books/${highestRated.id}/`} class="mt-2 block font-serif text-2xl font-semibold leading-snug text-white transition hover:text-orange-200">{highestRated.data.title}</a>
+          <p class="mt-2 text-sm text-stone-400">{highestRated.data.author}</p>
+          <div class="mt-5"><Stars rating={highestRated.data.rating!} showValue /></div>
+        </>
+      ) : (
+        <p class="mt-6 text-sm leading-7 text-stone-300">為讀完的書留下評分，這裡會替你找出最喜歡的一本。</p>
+      )}
+    </div>
   </section>
 
-  <section class="grid gap-8 md:grid-cols-2">
-    <div>
-      <div class="mb-4 flex items-center gap-3">
-        <h2 class="font-serif text-xl font-medium text-stone-800">評分分布</h2>
-        <span class="flex-1 border-t border-stone-200" aria-hidden="true"></span>
-      </div>
-      <div class="rounded-2xl border border-stone-200/80 bg-white p-6 shadow-sm">
-        {dist.map((d) => (
-          <div class="mb-2.5 flex items-center gap-3">
-            <span class="w-8 text-sm text-stone-500">{d.rating.toFixed(1)}</span>
-            <div class="h-3 flex-1 overflow-hidden rounded-full bg-stone-100">
-              <div
-                class="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-300"
-                style={`width:${(d.count / maxDist) * 100}%`}
-              />
-            </div>
-            <span class="w-5 text-right text-xs text-stone-400">{d.count}</span>
+  <section class="mb-10 surface rounded-[1.6rem] p-5 sm:p-7">
+    <div class="flex items-end justify-between gap-4">
+      <div><p class="eyebrow">This year</p><h2 class="mt-2 font-serif text-xl font-semibold text-stone-900">{currentYear} 閱讀節奏</h2></div>
+      <span class="text-sm text-stone-400">共 {months.reduce((sum, month) => sum + month.count, 0)} 本</span>
+    </div>
+    <div class="mt-7 grid grid-cols-6 gap-2 sm:grid-cols-12 sm:gap-3">
+      {months.map((month) => (
+        <div class="flex flex-col items-center gap-2">
+          <div class="flex h-24 w-full items-end overflow-hidden rounded-lg bg-stone-100">
+            <div class:list={['w-full rounded-lg transition', month.count ? 'bg-sage' : 'bg-stone-200/60']} style={`height:${month.count ? Math.max((month.count / maxMonthCount) * 100, 12) : 6}%`} title={`${month.label}：${month.count} 本`}></div>
+          </div>
+          <span class="text-[0.62rem] text-stone-400">{month.label.replace('月', '')}</span>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <section class="grid gap-5 lg:grid-cols-3">
+    <div class="surface rounded-[1.5rem] p-6">
+      <p class="eyebrow">Ratings</p>
+      <h2 class="mt-2 font-serif text-xl font-semibold text-stone-900">評分分布</h2>
+      <div class="mt-6 space-y-2.5">
+        {distribution.map((item) => (
+          <div class="flex items-center gap-3">
+            <span class="w-7 text-xs tabular-nums text-stone-500">{item.rating}</span>
+            <div class="h-2 flex-1 overflow-hidden rounded-full bg-stone-100"><div class="h-full rounded-full bg-amber-400" style={`width:${(item.count / maxRatingCount) * 100}%`}></div></div>
+            <span class="w-4 text-right text-xs text-stone-400">{item.count}</span>
           </div>
         ))}
       </div>
     </div>
 
-    <div class="space-y-8">
-      <div>
-        <div class="mb-4 flex items-center gap-3">
-          <h2 class="font-serif text-xl font-medium text-stone-800">讀最多的作者</h2>
-          <span class="flex-1 border-t border-stone-200" aria-hidden="true"></span>
-        </div>
-        <div class="rounded-2xl border border-stone-200/80 bg-white p-6 shadow-sm">
-          {topAuthors.length > 0 ? (
-            <ul class="space-y-3">
-              {topAuthors.map(([name, count]) => (
-                <li class="flex items-center justify-between">
-                  <span class="text-stone-700">{name}</span>
-                  <span class="rounded-full bg-amber-100/80 px-2.5 py-0.5 text-xs text-amber-800">{count} 本</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p class="text-stone-500">暫無資料。</p>
-          )}
-        </div>
-      </div>
+    <div class="surface rounded-[1.5rem] p-6">
+      <p class="eyebrow">Authors</p>
+      <h2 class="mt-2 font-serif text-xl font-semibold text-stone-900">常讀作者</h2>
+      {topAuthors.length > 0 ? (
+        <ol class="mt-6 space-y-4">
+          {topAuthors.map(([author, count], index) => (
+            <li class="flex items-center gap-3"><span class="grid size-7 place-items-center rounded-full bg-stone-100 text-xs text-stone-400">{index + 1}</span><span class="min-w-0 flex-1 truncate text-sm text-stone-700">{author}</span><strong class="text-xs font-medium text-stone-400">{count} 本</strong></li>
+          ))}
+        </ol>
+      ) : <p class="mt-6 text-sm text-stone-500">暫無資料。</p>}
+    </div>
 
-      <div>
-        <div class="mb-4 flex items-center gap-3">
-          <h2 class="font-serif text-xl font-medium text-stone-800">使用最多的標籤</h2>
-          <span class="flex-1 border-t border-stone-200" aria-hidden="true"></span>
+    <div class="rounded-[1.5rem] bg-[#d9e0d4] p-6">
+      <p class="eyebrow !text-sage">Topics</p>
+      <h2 class="mt-2 font-serif text-xl font-semibold text-stone-900">閱讀主題</h2>
+      {topTags.length > 0 ? (
+        <div class="mt-6 flex flex-wrap gap-2">
+          {topTags.map(([tag, count], index) => (
+            <a href={`${BASE}tags/${encodeURIComponent(tag)}/`} class:list={['rounded-full border border-white/60 bg-white/55 px-3 py-1.5 text-stone-700 transition hover:bg-white', index < 2 ? 'text-base' : 'text-sm']}>#{tag} <span class="text-xs text-stone-400">{count}</span></a>
+          ))}
         </div>
-        <div class="rounded-2xl border border-stone-200/80 bg-white p-6 shadow-sm">
-          {topTags.length > 0 ? (
-            <ul class="space-y-3">
-              {topTags.map(([tag, count]) => (
-                <li class="flex items-center justify-between">
-                  <span class="font-serif text-stone-700">#{tag}</span>
-                  <span class="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs text-stone-500">{count} 本</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p class="text-stone-500">暫無資料。</p>
-          )}
-        </div>
-      </div>
+      ) : <p class="mt-6 text-sm text-stone-500">暫無資料。</p>}
     </div>
   </section>
 </Layout>

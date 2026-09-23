@@ -4,35 +4,45 @@ import { getCollection } from 'astro:content';
 import { finished } from '../utils/books';
 
 const all = await getCollection('books');
+const done = finished(all);
 const BASE = import.meta.env.BASE_URL;
 ---
 
-<Layout title="匯出">
-  <div class="mb-8 flex items-center gap-3">
-    <h1 class="font-serif text-3xl font-medium text-stone-800">匯出</h1>
-    <span class="flex-1 border-t border-stone-200" aria-hidden="true"></span>
-  </div>
+<Layout title="資料匯出" description="下載完整書籍資料，隨時備份自己的閱讀紀錄。">
+  <header class="mb-10">
+    <p class="eyebrow">Your data, always</p>
+    <h1 class="page-title mt-3">帶走你的閱讀資料</h1>
+    <p class="mt-4 max-w-2xl text-sm leading-7 text-stone-500">一鍵下載結構化 JSON 備份。你的書、評分、日期、標籤與閱讀進度，都不會被鎖在平台裡。</p>
+  </header>
 
-  <article class="max-w-2xl rounded-2xl border border-stone-200/80 bg-white p-6 shadow-sm sm:p-8">
-    <p class="text-stone-700">
-      所有書籍資料以 <strong>JSON</strong> 格式提供下載,方便備份或遷移到其他平台。
-    </p>
-    <p class="mt-1 text-sm text-stone-500">
-      目前共收錄 {all.length} 本書(其中 {finished(all).length} 本已讀)。
-    </p>
+  <section class="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+    <article class="relative overflow-hidden rounded-[1.7rem] bg-stone-900 p-7 text-white sm:p-10">
+      <div class="absolute -right-14 -top-14 size-52 rounded-full border border-white/10" aria-hidden="true"></div>
+      <div class="absolute -right-5 -top-5 size-32 rounded-full border border-white/10" aria-hidden="true"></div>
+      <div class="relative">
+        <span class="grid size-11 place-items-center rounded-xl bg-orange-200 text-stone-900" aria-hidden="true">
+          <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 20h14" /></svg>
+        </span>
+        <h2 class="mt-7 font-serif text-3xl font-semibold">完整 JSON 備份</h2>
+        <p class="mt-3 max-w-xl text-sm leading-7 text-stone-400">包含目前收錄的 {all.length} 本書，其中 {done.length} 本已讀完。檔案可用於備份、資料分析或遷移到其他服務。</p>
+        <a href={`${BASE}export/books.json`} download="books.json" class="mt-8 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-bold text-stone-900 transition hover:bg-orange-100">
+          下載 books.json
+          <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6" /></svg>
+        </a>
+      </div>
+    </article>
 
-    <a
-      href={`${BASE}export/books.json`}
-      download="books.json"
-      class="mt-6 inline-flex items-center gap-2 rounded-full bg-stone-800 px-6 py-3 text-sm font-medium text-white shadow transition hover:bg-stone-700"
-    >
-      ⬇️ 下載 books.json
-    </a>
-
-    <div class="mt-8 border-t border-stone-100 pt-5 text-sm text-stone-500">
-      每本書對應的 Markdown 檔,也直接保存在
-      <code class="rounded bg-stone-100 px-1.5 py-0.5 text-xs text-stone-600">src/content/books/</code>
-      目錄中,本身就是最完整的備份。
-    </div>
-  </article>
+    <aside class="surface rounded-[1.7rem] p-7">
+      <p class="eyebrow">Included</p>
+      <h2 class="mt-2 font-serif text-xl font-semibold text-stone-900">匯出內容</h2>
+      <ul class="mt-6 space-y-4 text-sm text-stone-600">
+        {['書名、作者與出版資訊', '閱讀狀態、日期與進度', '評分與所有標籤', '每本書的永久連結'].map((item) => (
+          <li class="flex items-center gap-3"><span class="grid size-5 place-items-center rounded-full bg-emerald-100 text-[0.65rem] font-bold text-emerald-700">✓</span>{item}</li>
+        ))}
+      </ul>
+      <div class="mt-7 border-t border-stone-100 pt-5 text-xs leading-6 text-stone-400">
+        Markdown 原始檔仍完整保存在 <code class="rounded bg-stone-100 px-1.5 py-0.5 text-stone-600">src/content/books/</code>。
+      </div>
+    </aside>
+  </section>
 </Layout>
