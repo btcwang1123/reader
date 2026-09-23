@@ -34,6 +34,16 @@ const isActive = (href: string) => href === BASE ? pathname === BASE : pathname.
     <link rel="alternate" type="application/rss+xml" title={`${SITE_TITLE} RSS`} href={`${BASE}rss.xml`} />
     <title>{title ? `${title} · ${SITE_TITLE}` : SITE_TITLE}</title>
     <meta name="description" content={description} />
+    {
+      import.meta.env.PROD && (
+        <script
+          is:inline
+          data-goatcounter="https://btcwang.goatcounter.com/count"
+          async
+          src="https://gc.zgo.at/count.js"
+        />
+      )
+    }
   </head>
   <body>
     <a href="#main-content" class="fixed left-4 top-4 z-[60] -translate-y-24 rounded-full bg-stone-900 px-4 py-2 text-sm text-white transition focus:translate-y-0">
