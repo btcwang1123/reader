@@ -5,7 +5,7 @@ publisher: "出版社"
 publishedYear: 2024
 isbn: "978XXXXXXXXXX"
 cover: "/covers/xxx.jpg"
-status: finished
+status: finished / reading / wantToRead
 rating: 4
 startedAt: 2025-01-01
 finishedAt: 2025-01-20
