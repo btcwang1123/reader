@@ -12,9 +12,8 @@ const base = process.env.SITE_BASE
 
 // https://astro.build/config
 export default defineConfig({
-  // TODO: 部署前請改成你 GitHub Pages 的實際網址
-  // 例: https://<username>.github.io/reader/
-  site: 'https://example.com/',
+  // GitHub Pages 網址
+  site: 'https://btcwang1123.github.io/reader/',
   base,
   vite: {
     plugins: [tailwindcss()]
