@@ -2,7 +2,10 @@ import { defineCollection, z } from 'astro:content';
 import { glob } from 'astro/loaders';
 
 const books = defineCollection({
-  loader: glob({ pattern: '**/*.md', base: './src/content/books' }),
+  loader: glob({
+    pattern: ['**/*.md', '!**/_*'], // 忽略 _ 開頭的檔案(例如模板檔),不會當成書
+    base: './src/content/books'
+  }),
   schema: z.object({
     // 書目
     title: z.string(),
