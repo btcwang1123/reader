@@ -87,6 +87,21 @@ Markdown body 建議用 `## 心得` 與 `## 書摘與筆記` 兩個章節,網站
 - 所有資料都只是「檔案」,在 `src/content/books/` 底下
 - 網站本身提供 `/export/books.json` 下載,方便結構化備份
 
-## 搜尋與篩選說明
+## 書籍留言區(Giscus)
 
-書庫頁起初提供標籤快速瀏覽;完整全文搜尋(書名/作者/標籤即時過濾)屬於 SPEC 中後續里程碑,尚未實作時請以標籤與書庫瀏覽為主。
+書籍詳情頁使用 Giscus 嵌入 GitHub Discussions 留言。啟用前需完成：
+
+1. GitHub repository 設為 **Public**，並在 Settings → General → Features 啟用 **Discussions**。
+2. 安裝 [Giscus GitHub App](https://github.com/apps/giscus) 到該 repository。
+3. 前往 [giscus.app](https://giscus.app/zh-TW)，輸入 `btcwang1123/reader`，選擇 Discussions 分類(建議 `General`)，取得 repo/category ID。
+4. GitHub repo → Settings → Secrets and variables → Actions → **Variables** → New repository variable，建立以下四個變數：`GISCUS_REPO`、`GISCUS_REPO_ID`、`GISCUS_CATEGORY`、`GISCUS_CATEGORY_ID`。部署 workflow 會自動讀取它們。
+5. 若要在本機預覽，建立 `.env`(已列入 `.gitignore`，不要提交)，填入：
+
+```dotenv
+PUBLIC_GISCUS_REPO="btcwang1123/reader"
+PUBLIC_GISCUS_REPO_ID="在 giscus.app 取得的 repo ID"
+PUBLIC_GISCUS_CATEGORY="General"
+PUBLIC_GISCUS_CATEGORY_ID="在 giscus.app 取得的 category ID"
+```
+
+重新啟動開發伺服器即可預覽留言區。部署時，GitHub Actions 會使用上述 Repository Variables；若變數尚未設定，書頁會顯示前往 repository Discussions 的連結。留言討論以書籍 slug 配對，因此留言會固定在對應書籍頁。
