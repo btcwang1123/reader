@@ -1,0 +1,94 @@
+---
+interface Props {
+  bookSlug: string;
+}
+
+const { bookSlug } = Astro.props;
+const repo = import.meta.env.PUBLIC_GISCUS_REPO ?? '';
+const repoId = import.meta.env.PUBLIC_GISCUS_REPO_ID ?? '';
+const category = import.meta.env.PUBLIC_GISCUS_CATEGORY ?? 'General';
+const categoryId = import.meta.env.PUBLIC_GISCUS_CATEGORY_ID ?? '';
+const configured = Boolean(repo && repoId && category && categoryId);
+const fallbackDiscussionsUrl = `https://github.com/${repo || 'btcwang1123/reader'}/discussions`;
+---
+
+<section class="mt-16 border-t border-stone-200 pt-10" aria-labelledby="comments-title">
+  <div class="mb-6">
+    <p class="eyebrow">Reader discussion</p>
+    <h2 id="comments-title" class="section-title mt-2">讀者交流</h2>
+    <p class="mt-2 text-sm leading-6 text-stone-500">歡迎分享你對這本書的想法、閱讀心得或延伸討論。</p>
+  </div>
+
+  {configured ? (
+    <div
+      class="surface min-h-40 rounded-[1.4rem] p-4 sm:p-6"
+      data-giscus
+      data-repo={repo}
+      data-repo-id={repoId}
+      data-category={category}
+      data-category-id={categoryId}
+      data-term={bookSlug}
+    >
+      <p class="text-sm text-stone-400" data-giscus-loading>留言區載入中…</p>
+    </div>
+  ) : (
+    <div class="rounded-[1.4rem] border border-stone-200 bg-white/60 p-5 text-sm leading-7 text-stone-600">
+      {import.meta.env.DEV ? (
+        <>
+          <strong class="font-semibold text-stone-800">Giscus 尚未設定</strong>
+          <p>先在 GitHub repo 啟用 Discussions、安裝 Giscus App，依 README 設定 `.env` 的四個 `PUBLIC_GISCUS_*` 值，再重新啟動伺服器。</p>
+        </>
+      ) : (
+        <>
+          <p>留言區尚未完成設定。完成 Giscus 設定後，讀者即可在此頁登入 GitHub 留言。</p>
+          <a href={fallbackDiscussionsUrl} target="_blank" rel="noreferrer" class="mt-2 inline-flex font-medium text-clay underline underline-offset-4">前往 GitHub Discussions →</a>
+        </>
+      )}
+    </div>
+  )}
+</section>
+
+{configured && (
+  <script>
+    const container = document.querySelector<HTMLElement>('[data-giscus]');
+
+    if (container) {
+      let loaded = false;
+      const loadGiscus = () => {
+        if (loaded) return;
+        loaded = true;
+        const script = document.createElement('script');
+        script.src = 'https://giscus.app/client.js';
+        script.async = true;
+        script.crossOrigin = 'anonymous';
+        script.dataset.repo = container.dataset.repo ?? '';
+        script.dataset.repoId = container.dataset.repoId ?? '';
+        script.dataset.category = container.dataset.category ?? 'General';
+        script.dataset.categoryId = container.dataset.categoryId ?? '';
+        script.dataset.mapping = 'specific';
+        script.dataset.term = container.dataset.term ?? '';
+        script.dataset.strict = '0';
+        script.dataset.reactionsEnabled = '1';
+        script.dataset.emitMetadata = '0';
+        script.dataset.inputPosition = 'top';
+        script.dataset.theme = document.documentElement.hasAttribute('data-night') ? 'dark' : 'light';
+        script.dataset.lang = 'zh-TW';
+        script.dataset.loading = 'lazy';
+        container.querySelector('[data-giscus-loading]')?.remove();
+        container.append(script);
+      };
+
+      if ('IntersectionObserver' in window) {
+        const observer = new IntersectionObserver((entries) => {
+          if (entries.some((entry) => entry.isIntersecting)) {
+            observer.disconnect();
+            loadGiscus();
+          }
+        }, { rootMargin: '300px' });
+        observer.observe(container);
+      } else {
+        loadGiscus();
+      }
+    }
+  </script>
+)}
