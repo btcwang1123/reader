@@ -1,11 +1,17 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import BookCard from '../components/BookCard.astro';
+import Stars from '../components/Stars.astro';
 import { getCollection } from 'astro:content';
-import { sortByStartedDesc } from '../utils/books';
+import { sortByStartedDesc, finished, firstQuote } from '../utils/books';
 
 const all = sortByStartedDesc(await getCollection('books'));
 const finishedBooks = all.filter((book) => book.data.status === 'finished');
+// 最近完成且有書摘的書(依完成日期由新到舊)
+const quotedBooks = finished(all)
+  .filter((book) => firstQuote(book.body ?? ''))
+  .sort((a, b) => (b.data.finishedAt?.getTime() ?? 0) - (a.data.finishedAt?.getTime() ?? 0))
+  .slice(0, 3);
 const readingBooks = all.filter((book) => book.data.status === 'reading');
 const wantToReadBooks = all.filter((book) => book.data.status === 'wantToRead');
 const currentYear = new Date().getFullYear();
@@ -104,6 +110,38 @@ const firstPick = pickOptions[0];
       </div>
       <div class="grid gap-5 md:grid-cols-2">
         {finishedBooks.slice(0, 4).map((book) => <BookCard book={book} />)}
+      </div>
+    </section>
+  )}
+
+  {quotedBooks.length > 0 && (
+    <section class="mb-16">
+      <div class="mb-6 flex items-end justify-between gap-4">
+        <div>
+          <p class="eyebrow">Quotes to keep</p>
+          <h2 class="section-title mt-2">最近書摘</h2>
+        </div>
+        <a href={`${BASE}books/`} class="hidden items-center gap-1 text-sm font-medium text-stone-500 transition hover:text-clay sm:flex">
+          翻書架 <span aria-hidden="true">→</span>
+        </a>
+      </div>
+      <div class="grid gap-5 lg:grid-cols-3">
+        {quotedBooks.map((book) => {
+          const quote = firstQuote(book.body ?? '');
+          return (
+            <a
+              href={`${BASE}books/${book.id}/#${encodeURIComponent('書摘與筆記')}`}
+              class="surface card-lift group relative flex flex-col rounded-[1.35rem] p-6"
+            >
+              <span class="font-serif text-5xl leading-none text-orange-300" aria-hidden="true">“</span>
+              {quote && <blockquote class="mt-2 flex-1 font-serif text-[0.95rem] leading-7 text-stone-700">「{quote}」</blockquote>}
+              <div class="mt-5 border-t border-stone-100 pt-4">
+                <p class="font-serif font-semibold text-stone-900 transition group-hover:text-clay">{book.data.title}</p>
+                <p class="mt-1 text-xs text-stone-400">{book.data.author}{book.data.rating ? <span class="ml-3 align-middle"><Stars rating={book.data.rating} /></span> : null}</p>
+              </div>
+            </a>
+          );
+        })}
       </div>
     </section>
   )}

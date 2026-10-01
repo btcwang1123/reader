@@ -23,6 +23,7 @@ export async function getExportData() {
       finishedAt: b.data.finishedAt?.toISOString().slice(0, 10),
       progress: b.data.progress,
       readingMinutes: b.data.readingMinutes,
+      readingDates: b.data.readingDates?.map((date) => date.toISOString().slice(0, 10)),
       tags: b.data.tags,
       url: site ? `${site}/books/${b.id}/` : `${BASE}books/${b.id}/`
     }))

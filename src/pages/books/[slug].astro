@@ -4,7 +4,7 @@ import Stars from '../../components/Stars.astro';
 import BookCard from '../../components/BookCard.astro';
 import Giscus from '../../components/Giscus.astro';
 import { getCollection, render } from 'astro:content';
-import { STATUS_LABELS, type Book } from '../../utils/books';
+import { STATUS_LABELS, readingDays, sortByFinishedAsc, finished, type Book } from '../../utils/books';
 
 export async function getStaticPaths() {
   const books = await getCollection('books');
@@ -212,8 +212,6 @@ const tableOfContents = headings.filter((heading) => heading.depth === 2 || head
       <div class="grid gap-5 md:grid-cols-2">{relatedBooks.map((related) => <BookCard book={related} />)}</div>
     </section>
   )}
-
-  <Giscus bookSlug={book.id} />
 
   <Giscus bookSlug={book.id} />
 

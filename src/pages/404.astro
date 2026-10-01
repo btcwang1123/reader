@@ -1,0 +1,19 @@
+---
+import Layout from '../layouts/Layout.astro';
+const BASE = import.meta.env.BASE_URL;
+---
+
+<Layout title="頁面不存在" description="找不到這個頁面。">
+  <section class="surface mx-auto flex max-w-2xl flex-col items-center rounded-[2rem] px-6 py-20 text-center sm:py-28">
+    <p class="font-serif text-7xl font-bold text-clay/80 sm:text-8xl">404</p>
+    <p class="eyebrow mt-8">Page not found</p>
+    <h1 class="page-title mt-3">這頁沒有翻到。</h1>
+    <p class="mt-4 max-w-md text-sm leading-7 text-stone-500">
+      可能網址打錯了、書被移走了，或者它根本還沒被寫進書架。回到首頁，從頭逛逛吧。
+    </p>
+    <div class="mt-9 flex flex-wrap justify-center gap-3">
+      <a href={`${BASE}books/`} class="rounded-full bg-stone-900 px-6 py-2.5 text-sm font-bold text-white transition hover:bg-clay">去書庫看看</a>
+      <a href={BASE} class="rounded-full border border-stone-300 bg-white/60 px-6 py-2.5 text-sm font-medium text-stone-700 transition hover:border-orange-300 hover:text-clay">回到首頁</a>
+    </div>
+  </section>
+</Layout>

@@ -7,6 +7,10 @@ import { finished } from '../utils/books';
 const all = await getCollection('books');
 const done = finished(all);
 const currentYear = new Date().getFullYear();
+const recapYears = [...new Set(done.flatMap((book) => book.data.finishedAt ? [book.data.finishedAt.getFullYear()] : []))].sort((a, b) => b - a);
+
+// 年度閱讀目標(想調整就改這個數字)
+const YEARLY_GOAL = 24;
 const totalFinished = done.length;
 const totalPages = done.reduce((sum, book) => sum + (book.data.progress?.totalPages ?? 0), 0);
 const totalMinutes = done.reduce((sum, book) => sum + (book.data.readingMinutes ?? 0), 0);
@@ -30,6 +34,12 @@ const months = Array.from({ length: 12 }, (_, index) => ({
   ).length
 }));
 const maxMonthCount = Math.max(...months.map(({ count }) => count), 1);
+
+const finishedThisYear = months.reduce((sum, month) => sum + month.count, 0);
+const goalPercent = Math.min(100, Math.round((finishedThisYear / YEARLY_GOAL) * 100));
+const goalRadius = 52;
+const goalCircumference = 2 * Math.PI * goalRadius;
+const goalDash = (goalPercent / 100) * goalCircumference;
 
 const distribution = [5, 4.5, 4, 3.5, 3, 2.5, 2, 1.5, 1].map((rating) => ({
   rating,
@@ -66,6 +76,11 @@ const overview = [
     </div>
     <p class="text-sm text-stone-400">資料更新至 {new Date().toLocaleDateString('zh-TW')}</p>
   </header>
+
+  <nav class="mb-8 flex flex-wrap gap-3" aria-label="閱讀回顧導覽">
+    <a href={`${BASE}calendar/`} class="rounded-full border border-stone-300 bg-white/70 px-4 py-2 text-sm font-medium text-stone-700 transition hover:border-orange-300 hover:text-clay">打開閱讀日曆 →</a>
+    {recapYears.map((year) => <a href={`${BASE}recap/${year}/`} class="rounded-full border border-stone-300 bg-white/70 px-4 py-2 text-sm font-medium text-stone-700 transition hover:border-orange-300 hover:text-clay">{year} 年度回顧</a>)}
+  </nav>
 
   <section class="mb-10 grid grid-cols-2 gap-3 lg:grid-cols-4">
     {overview.map((stat) => (
@@ -114,20 +129,44 @@ const overview = [
     </div>
   </section>
 
-  <section class="mb-10 surface rounded-[1.6rem] p-5 sm:p-7">
-    <div class="flex items-end justify-between gap-4">
-      <div><p class="eyebrow">This year</p><h2 class="mt-2 font-serif text-xl font-semibold text-stone-900">{currentYear} 閱讀節奏</h2></div>
-      <span class="text-sm text-stone-400">共 {months.reduce((sum, month) => sum + month.count, 0)} 本</span>
-    </div>
-    <div class="mt-7 grid grid-cols-6 gap-2 sm:grid-cols-12 sm:gap-3">
-      {months.map((month) => (
-        <div class="flex flex-col items-center gap-2">
-          <div class="flex h-24 w-full items-end overflow-hidden rounded-lg bg-stone-100">
-            <div class:list={['w-full rounded-lg transition', month.count ? 'bg-sage' : 'bg-stone-200/60']} style={`height:${month.count ? Math.max((month.count / maxMonthCount) * 100, 12) : 6}%`} title={`${month.label}：${month.count} 本`}></div>
-          </div>
-          <span class="text-[0.62rem] text-stone-400">{month.label.replace('月', '')}</span>
+  <section class="mb-10 grid gap-5 lg:grid-cols-[0.62fr_1.38fr]">
+    <div class="surface flex flex-col items-center justify-center rounded-[1.6rem] p-5 text-center sm:p-7">
+      <p class="eyebrow">Yearly goal</p>
+      <h2 class="mt-2 font-serif text-xl font-semibold text-stone-900">{currentYear} 閱讀目標</h2>
+      <div class="relative mt-6 grid place-items-center">
+        <svg viewBox="0 0 120 120" class="size-36 -rotate-90" aria-hidden="true">
+          <circle cx="60" cy="60" r={goalRadius} fill="none" stroke="currentColor" stroke-width="10" class="text-stone-100" />
+          <circle
+            cx="60" cy="60" r={goalRadius} fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="round"
+            class="text-clay transition-all"
+            stroke-dasharray={`${goalDash} ${goalCircumference}`}
+          />
+        </svg>
+        <div class="absolute text-center">
+          <p class="font-serif text-3xl font-bold tabular-nums text-stone-900">{goalPercent}%</p>
+          <p class="mt-0.5 text-xs text-stone-400">{finishedThisYear} / {YEARLY_GOAL} 本</p>
         </div>
-      ))}
+      </div>
+      <p class="mt-5 text-sm leading-6 text-stone-500">
+        {goalPercent >= 100 ? '已達成今年目標，繼續享受閱讀吧！' : `距離目標還有 ${YEARLY_GOAL - finishedThisYear} 本`}
+      </p>
+    </div>
+
+    <div class="surface rounded-[1.6rem] p-5 sm:p-7">
+      <div class="flex items-end justify-between gap-4">
+        <div><p class="eyebrow">This year</p><h2 class="mt-2 font-serif text-xl font-semibold text-stone-900">{currentYear} 閱讀節奏</h2></div>
+        <span class="text-sm text-stone-400">共 {finishedThisYear} 本</span>
+      </div>
+      <div class="mt-7 grid grid-cols-6 gap-2 sm:grid-cols-12 sm:gap-3">
+        {months.map((month) => (
+          <div class="flex flex-col items-center gap-2">
+            <div class="flex h-24 w-full items-end overflow-hidden rounded-lg bg-stone-100">
+              <div class:list={['w-full rounded-lg transition', month.count ? 'bg-sage' : 'bg-stone-200/60']} style={`height:${month.count ? Math.max((month.count / maxMonthCount) * 100, 12) : 6}%`} title={`${month.label}：${month.count} 本`}></div>
+            </div>
+            <span class="text-[0.62rem] text-stone-400">{month.label.replace('月', '')}</span>
+          </div>
+        ))}
+      </div>
     </div>
   </section>
 

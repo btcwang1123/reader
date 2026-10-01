@@ -22,3 +22,7 @@ pnpm-debug.log*
 
 # jetbrains setting folder
 .idea/
+.superpowers/
+
+# local git worktrees checked out inside the repo
+..Reader-giscus/

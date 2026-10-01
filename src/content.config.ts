@@ -27,7 +27,9 @@ const books = defineCollection({
       .optional(),
     // 分類與統計
     tags: z.array(z.string()).default([]),
-    readingMinutes: z.number().optional()
+    readingMinutes: z.number().optional(),
+    // 明確記錄的閱讀日期;不從開始/讀完日期推算
+    readingDates: z.array(z.coerce.date()).optional()
   })
 });
 

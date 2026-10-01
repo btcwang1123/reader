@@ -1,0 +1,159 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Stars from '../components/Stars.astro';
+import { getCollection } from 'astro:content';
+import { finished, reading, sortByFinishedAsc, sortByStartedDesc } from '../utils/books';
+
+const all = await getCollection('books');
+const done = sortByFinishedAsc(finished(all));
+const nowReading = sortByStartedDesc(reading(all));
+const BASE = import.meta.env.BASE_URL;
+
+// 總覽:讀完本數、閱讀旅程跨度(第一本到最近一本讀完)、總閱讀時光
+const totalFinished = done.length;
+const totalMinutes = done.reduce((sum, book) => sum + (book.data.readingMinutes ?? 0), 0);
+const finishedDates = done
+  .map((book) => book.data.finishedAt?.getTime())
+  .filter((time): time is number => typeof time === 'number');
+const spanDays = finishedDates.length
+  ? Math.round((Math.max(...finishedDates) - Math.min(...finishedDates)) / 86_400_000)
+  : 0;
+
+const overview = [
+  { label: '累積讀完', value: String(totalFinished), unit: '本' },
+  { label: '閱讀旅程', value: spanDays > 0 ? spanDays.toLocaleString() : '—', unit: '天' },
+  { label: '總閱讀時光', value: totalMinutes ? (totalMinutes / 60).toFixed(1) : '—', unit: '小時' }
+];
+
+// 依年份分段(沒有讀完日期的歸到「時間未定」)
+type YearGroup = { year: number | null; label: string; books: typeof done };
+const groups: YearGroup[] = [];
+for (const book of done) {
+  const year = book.data.finishedAt?.getFullYear() ?? null;
+  const last = groups.at(-1);
+  if (last && last.year === year) {
+    last.books.push(book);
+  } else {
+    groups.push({ year, label: year ? String(year) : '時間未定', books: [book] });
+  }
+}
+
+const monthLabel = (date?: Date) => (date ? `${date.getMonth() + 1} 月` : '');
+---
+
+<Layout title="編年史" description="從第一本到最近一本，依讀完的時間排成一條閱讀長河。">
+  <header class="mb-10">
+    <p class="eyebrow">Reading chronicle</p>
+    <h1 class="page-title mt-3">閱讀編年史</h1>
+    <p class="mt-4 max-w-xl text-sm leading-7 text-stone-500">
+      把讀完的每一本書，依時間先後排成一條長河——從最早的那一本，一路走到最近。
+    </p>
+  </header>
+
+  {done.length > 0 ? (
+    <>
+      <section class="mb-12 grid grid-cols-3 gap-3">
+        {overview.map((stat) => (
+          <div class="surface rounded-[1.4rem] p-4 text-center sm:p-6">
+            <p class="font-serif text-2xl font-semibold tabular-nums text-stone-900 sm:text-4xl">
+              {stat.value}<span class="ml-1 text-xs font-normal text-stone-400">{stat.unit}</span>
+            </p>
+            <p class="mt-1.5 text-xs tracking-wide text-stone-500">{stat.label}</p>
+          </div>
+        ))}
+      </section>
+
+      <div class="relative">
+        {groups.map((group) => (
+          <section class="mb-4">
+            <div class="mb-5 flex items-baseline gap-3">
+              <h2 class="font-serif text-2xl font-bold text-stone-900">{group.label}</h2>
+              <span class="text-xs text-stone-400">讀完 {group.books.length} 本</span>
+            </div>
+
+            <ol class="ml-2 border-l-2 border-stone-200 pl-6 sm:pl-8">
+              {group.books.map((book) => (
+                <li class="relative mb-5 last:mb-0">
+                  <span
+                    class="absolute -left-[calc(1.5rem+7px)] top-5 size-3.5 rounded-full border-2 border-white bg-clay shadow-[0_0_0_2px_theme(colors.stone.200)] sm:-left-[calc(2rem+7px)]"
+                    aria-hidden="true"
+                  ></span>
+                  <article class="surface rounded-[1.2rem] p-4 transition hover:shadow-md sm:p-5">
+                    <p class="text-xs font-semibold uppercase tracking-wider text-clay">
+                      {group.year ? `${group.year} · ${monthLabel(book.data.finishedAt)}` : '讀完日期未記錄'}
+                    </p>
+                    <h3 class="mt-1.5 font-serif text-lg font-semibold text-stone-900">
+                      <a href={`${BASE}books/${book.id}/`} class="transition hover:text-clay">{book.data.title}</a>
+                    </h3>
+                    <p class="mt-1 text-sm text-stone-500">
+                      {book.data.author}{book.data.publisher ? ` · ${book.data.publisher}` : ''}
+                    </p>
+                    {book.data.rating && (
+                      <div class="mt-3"><Stars rating={book.data.rating} showValue /></div>
+                    )}
+                  </article>
+                </li>
+              ))}
+            </ol>
+          </section>
+        ))}
+
+        {nowReading.length > 0 && (
+          <section class="mb-4">
+            <div class="mb-5 flex items-baseline gap-3">
+              <h2 class="font-serif text-2xl font-bold text-clay">此刻</h2>
+              <span class="text-xs text-stone-400">仍在讀 {nowReading.length} 本</span>
+            </div>
+            <ol class="ml-2 border-l-2 border-dashed border-clay/40 pl-6 sm:pl-8">
+              {nowReading.map((book) => (
+                <li class="relative mb-5 last:mb-0">
+                  <span
+                    class="absolute -left-[calc(1.5rem+7px)] top-5 size-3.5 animate-pulse rounded-full border-2 border-white bg-clay shadow-[0_0_0_2px_theme(colors.orange.200)] sm:-left-[calc(2rem+7px)]"
+                    aria-hidden="true"
+                  ></span>
+                  <article class="surface rounded-[1.2rem] p-4 transition hover:shadow-md sm:p-5">
+                    <p class="text-xs font-semibold uppercase tracking-wider text-clay">閱讀中</p>
+                    <h3 class="mt-1.5 font-serif text-lg font-semibold text-stone-900">
+                      <a href={`${BASE}books/${book.id}/`} class="transition hover:text-clay">{book.data.title}</a>
+                    </h3>
+                    <p class="mt-1 text-sm text-stone-500">
+                      {book.data.author}{book.data.publisher ? ` · ${book.data.publisher}` : ''}
+                    </p>
+                  </article>
+                </li>
+              ))}
+            </ol>
+          </section>
+        )}
+      </div>
+    </>
+  ) : (
+    <div class="surface rounded-[1.6rem] px-6 py-16 text-center">
+      <span class="mx-auto grid size-12 place-items-center rounded-full bg-stone-100 text-stone-400" aria-hidden="true">
+        <svg viewBox="0 0 24 24" class="size-6" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 8v4l3 2" /><circle cx="12" cy="12" r="9" /></svg>
+      </span>
+      <h2 class="mt-4 font-serif text-xl font-semibold text-stone-800">編年史還是空白的一頁</h2>
+      <p class="mt-2 text-sm text-stone-500">讀完第一本書、記下讀完的日期後，這條時間長河就會從這裡開始。</p>
+    </div>
+  )}
+
+  <button
+    type="button"
+    data-back-to-top
+    hidden
+    class="fixed bottom-6 right-6 z-40 grid size-11 place-items-center rounded-full bg-stone-900 text-white shadow-lg transition hover:bg-clay"
+    aria-label="回到頂部"
+  >
+    <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 15 6-6 6 6" /></svg>
+  </button>
+
+  <script>
+    const button = document.querySelector<HTMLButtonElement>('[data-back-to-top]');
+    if (button) {
+      const toggle = () => { button.hidden = window.scrollY < 600; };
+      button.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+      document.addEventListener('scroll', toggle, { passive: true });
+      toggle();
+    }
+  </script>
+</Layout>

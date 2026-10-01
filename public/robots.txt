@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://btcwang1123.github.io/reader/sitemap.xml

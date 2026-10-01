@@ -4,19 +4,35 @@ import '../styles/global.css';
 interface Props {
   title?: string;
   description?: string;
+  /** 分享圖(絕對或相對路徑,會被接上 base) */
+  image?: string;
 }
 
 const {
   title = '',
-  description = '收藏讀過的書、沿途的想法，以及那些捨不得忘記的句子。'
+  description = '收藏讀過的書、沿途的想法，以及那些捨不得忘記的句子。',
+  image
 } = Astro.props;
 
 const SITE_TITLE = '拾頁書室';
+const SITE_ORIGIN = new URL(import.meta.env.SITE ?? 'https://example.com').origin;
 const BASE = import.meta.env.BASE_URL;
+const DEFAULT_SHARE_IMAGE = new URL(`${BASE}share-cover.jpg`, `${SITE_ORIGIN}/`).href;
+// 相對圖片路徑以網站 base 為根,絕對網址可直接傳入
+const SHARE_IMAGE = !image
+  ? DEFAULT_SHARE_IMAGE
+  : image.startsWith('http')
+    ? image
+    : new URL(`${BASE}${image.replace(/^\/+/, '')}`, `${SITE_ORIGIN}/`).href;
+// Astro.url.pathname 在 GitHub Pages 已包含 base,所以只接 site origin 避免重複 repo 路徑
+const pageUrl = new URL(Astro.url.pathname, `${SITE_ORIGIN}/`).href;
+const pageTitle = title ? `${title} · ${SITE_TITLE}` : SITE_TITLE;
 const nav = [
   { href: `${BASE}`, label: '首頁' },
   { href: `${BASE}books/`, label: '書庫' },
   { href: `${BASE}stats/`, label: '閱讀足跡' },
+  { href: `${BASE}timeline/`, label: '編年史' },
+  { href: `${BASE}calendar/`, label: '閱讀日曆' },
   { href: `${BASE}about/`, label: '關於' }
 ];
 const pathname = Astro.url.pathname;
@@ -32,8 +48,20 @@ const isActive = (href: string) => href === BASE ? pathname === BASE : pathname.
     <meta name="theme-color" content="#f7f3eb" />
     <link rel="icon" type="image/svg+xml" href={`${BASE}favicon.svg`} />
     <link rel="alternate" type="application/rss+xml" title={`${SITE_TITLE} RSS`} href={`${BASE}rss.xml`} />
-    <title>{title ? `${title} · ${SITE_TITLE}` : SITE_TITLE}</title>
+    <title>{pageTitle}</title>
     <meta name="description" content={description} />
+    <link rel="canonical" href={pageUrl} />
+    <!-- 社群分享 (Open Graph / Twitter Card) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={SITE_TITLE} />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={pageUrl} />
+    <meta property="og:image" content={SHARE_IMAGE} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={SHARE_IMAGE} />
     {
       import.meta.env.PROD && (
         <script

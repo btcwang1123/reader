@@ -14,6 +14,8 @@ progress:
   totalPages: 300
 tags: ["分類一", "分類二"]
 readingMinutes: 600
+# 可選:只填實際有閱讀的日期,閱讀日曆才會統計
+readingDates: [2025-01-01, 2025-01-03, 2025-01-05]
 ---
 
 ## 心得

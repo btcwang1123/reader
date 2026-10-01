@@ -18,6 +18,7 @@
     --page-ink: #292722;
     --page-muted: #756f65;
     --accent: #a6482d;
+    --header-h: 69px;
   }
 
   html { @apply scroll-smooth; }
@@ -79,6 +80,33 @@
 .prose h2 { margin-top: 2.4em; padding-bottom: 0.55em; border-bottom: 1px solid rgb(214 211 209 / 0.8); }
 .prose blockquote { border-radius: 0 1rem 1rem 0; background: #fbf3e8; padding: 1.1rem 1.4rem; font-family: var(--font-serif); font-style: normal; }
 .prose code:not(pre code) { border-radius: 0.35rem; background: #eee9df; padding: 0.15rem 0.35rem; font-size: 0.85em; }
+
+/* 夜間閱讀模式:只作用於詳情頁的文章本體 */
+html[data-night] [data-reading-copy] { background: #211d1a; border-color: #2c2622; }
+html[data-night] .prose {
+  color: #d6d3d1;
+  --tw-prose-body: #d6d3d1;
+  --tw-prose-headings: #f5f5f4;
+  --tw-prose-lead: #d6d3d1;
+  --tw-prose-links: #eeb4a1;
+  --tw-prose-bold: #fafaf9;
+  --tw-prose-counters: #d6d3d1;
+  --tw-prose-bullets: #a6482d;
+  --tw-prose-hr: #3a352e;
+  --tw-prose-quotes: #e7e5e4;
+  --tw-prose-quote-borders: #c26a47;
+  --tw-prose-code: #fafaf9;
+  --tw-prose-pre-code: #e7e5e4;
+  --tw-prose-pre-bg: #0f0d0b;
+  --tw-prose-th-borders: #44403c;
+  --tw-prose-td-borders: #292524;
+}
+html[data-night] .prose h1, html[data-night] .prose h2, html[data-night] .prose h3,
+html[data-night] .prose h4 { color: #f5f5f4; }
+html[data-night] .prose blockquote { background: #2a2420; }
+html[data-night] .prose code:not(pre code) { background: #2a2420; color: #fafaf9; }
+html[data-night] .prose a { text-decoration-color: rgb(238 180 161 / 0.4); }
+html[data-night] .prose mark { background: #57534e; color: #fafaf9; }
 .no-scrollbar { scrollbar-width: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
 [hidden] { display: none !important; }

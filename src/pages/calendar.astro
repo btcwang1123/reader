@@ -1,0 +1,120 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getCollection } from 'astro:content';
+
+const books = await getCollection('books');
+const dateCounts = new Map<string, number>();
+for (const book of books) {
+  for (const date of book.data.readingDates ?? []) {
+    const key = date.toISOString().slice(0, 10);
+    dateCounts.set(key, (dateCounts.get(key) ?? 0) + 1);
+  }
+}
+const dates = [...dateCounts.keys()].sort();
+const years = [...new Set(dates.map((date) => Number(date.slice(0, 4))))].sort((a, b) => b - a);
+const currentYear = new Date().getFullYear();
+const initialYear = years.includes(currentYear) ? currentYear : (years[0] ?? currentYear);
+const initialDays = [...dateCounts.keys()].filter((date) => date.startsWith(`${initialYear}-`)).length;
+const BASE = import.meta.env.BASE_URL;
+const uniqueDates = dates.length;
+const totalRecords = [...dateCounts.values()].reduce((sum, count) => sum + count, 0);
+---
+
+<Layout title="閱讀日曆" description="只記錄實際有閱讀的日期，回望閱讀節奏與累積。">
+  <header class="mb-9 grid gap-5 md:grid-cols-[1fr_auto] md:items-end">
+    <div>
+      <p class="eyebrow">Reading calendar</p>
+      <h1 class="page-title mt-3">閱讀日曆</h1>
+      <p class="mt-4 max-w-2xl text-sm leading-7 text-stone-500">這裡只標示有明確記錄的閱讀日期，不會把開始閱讀到讀完之間的每一天都算進去。編輯書籍 Markdown 的 <code class="rounded bg-stone-100 px-1.5 py-0.5">readingDates</code> 欄位即可新增紀錄。</p>
+    </div>
+    <label class="text-sm text-stone-500">年份
+      <select data-calendar-year class="ml-2 rounded-lg border border-stone-200 bg-white px-3 py-2 text-stone-700">
+        {(years.length ? years : [initialYear]).map((year) => <option value={year} selected={year === initialYear}>{year}</option>)}
+      </select>
+    </label>
+  </header>
+
+  <div class="mb-7 grid grid-cols-2 gap-3 sm:grid-cols-3">
+    <div class="surface rounded-[1.2rem] p-4"><p class="font-serif text-2xl font-semibold tabular-nums text-stone-900">{uniqueDates}</p><p class="mt-1 text-xs text-stone-500">累積閱讀日</p></div>
+    <div class="surface rounded-[1.2rem] p-4"><p class="font-serif text-2xl font-semibold tabular-nums text-stone-900">{initialDays}</p><p class="mt-1 text-xs text-stone-500">{initialYear} 年閱讀日</p></div>
+    <div class="surface col-span-2 rounded-[1.2rem] p-4 sm:col-span-1"><p class="font-serif text-2xl font-semibold tabular-nums text-stone-900">{totalRecords}</p><p class="mt-1 text-xs text-stone-500">書籍閱讀紀錄總次數</p></div>
+  </div>
+
+  <section class="surface mb-7 rounded-[1.5rem] p-5 sm:p-7" data-calendar data-dates={JSON.stringify(dates)} data-date-counts={JSON.stringify(Object.fromEntries(dateCounts))} data-initial-year={initialYear}>
+    <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
+      <div><p class="eyebrow">Your reading days</p><h2 data-calendar-title class="mt-2 font-serif text-2xl font-semibold text-stone-900">{initialYear}</h2></div>
+      <p class="text-sm text-stone-500">今年記下 <strong data-calendar-count class="text-stone-900">{initialDays}</strong> 個閱讀日</p>
+    </div>
+    <div data-calendar-grid class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3" aria-live="polite"></div>
+    <div class="mt-7 flex flex-wrap items-center gap-2 text-xs text-stone-500" aria-label="閱讀日曆圖例">
+      <span>較少</span><i class="size-3 rounded-sm bg-stone-100"></i><i class="size-3 rounded-sm bg-orange-200"></i><i class="size-3 rounded-sm bg-orange-400"></i><i class="size-3 rounded-sm bg-clay"></i><span>同日多本</span>
+    </div>
+  </section>
+
+  <aside class="rounded-[1.3rem] bg-[#d9e0d4] p-5 text-sm leading-7 text-stone-600">
+    <strong class="font-semibold text-stone-800">怎麼記錄？</strong>
+    <p>在書籍 frontmatter 加上日期陣列，例如 <code class="rounded bg-white/70 px-1.5 py-0.5">readingDates: [2026-03-01, 2026-03-04]</code>。同一本書可逐次補上日期；相同日期會自動合併計算。</p>
+    <a href={`${BASE}export/`} class="mt-2 inline-flex font-medium text-clay underline underline-offset-4">查看資料備份方式</a>
+  </aside>
+
+  <script>
+    const root = document.querySelector<HTMLElement>('[data-calendar]');
+    if (root) {
+      const dates = new Set<string>(JSON.parse(root.dataset.dates ?? '[]'));
+      const dateCounts = JSON.parse(root.dataset.dateCounts ?? '{}') as Record<string, number>;
+      const years = document.querySelector<HTMLSelectElement>('[data-calendar-year]')!;
+      const grid = root.querySelector<HTMLElement>('[data-calendar-grid]')!;
+      const title = root.querySelector<HTMLElement>('[data-calendar-title]')!;
+      const count = root.querySelector<HTMLElement>('[data-calendar-count]')!;
+      const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+
+      function renderCalendar(year: number) {
+        title.textContent = String(year);
+        const days = [...dates].filter((date) => date.startsWith(`${year}-`));
+        count.textContent = String(days.length);
+        grid.replaceChildren();
+
+        for (let month = 0; month < 12; month++) {
+          const section = document.createElement('section');
+          section.setAttribute('aria-label', `${year} 年 ${month + 1} 月`);
+          const heading = document.createElement('h3');
+          heading.className = 'mb-2 font-serif text-lg font-semibold text-stone-800';
+          heading.textContent = `${month + 1} 月`;
+          section.append(heading);
+
+          const table = document.createElement('div');
+          table.className = 'grid grid-cols-7 gap-1 text-center';
+          for (const weekday of weekdays) {
+            const label = document.createElement('span');
+            label.className = 'py-1 text-[0.62rem] text-stone-400';
+            label.textContent = weekday;
+            table.append(label);
+          }
+          const firstWeekday = new Date(year, month, 1).getDay();
+          const lastDay = new Date(year, month + 1, 0).getDate();
+          for (let blank = 0; blank < firstWeekday; blank++) {
+            const spacer = document.createElement('span');
+            spacer.setAttribute('aria-hidden', 'true');
+            table.append(spacer);
+          }
+          for (let day = 1; day <= lastDay; day++) {
+            const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const cell = document.createElement('span');
+            const sessions = dateCounts[key] ?? 0;
+            const active = sessions > 0;
+            const intensity = sessions >= 3 ? 'bg-clay text-white' : sessions === 2 ? 'bg-orange-400 text-white' : sessions === 1 ? 'bg-orange-200 text-stone-800' : 'bg-stone-50 text-stone-400';
+            cell.className = `grid aspect-square place-items-center rounded-md text-[0.65rem] ${intensity}`;
+            cell.textContent = String(day);
+            if (active) cell.setAttribute('aria-label', `${key}，${sessions} 本書有閱讀紀錄`);
+            table.append(cell);
+          }
+          section.append(table);
+          grid.append(section);
+        }
+      }
+
+      years.addEventListener('change', () => renderCalendar(Number(years.value)));
+      renderCalendar(Number(root.dataset.initialYear));
+    }
+  </script>
+</Layout>

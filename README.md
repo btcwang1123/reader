@@ -11,7 +11,14 @@
 - 📝 書摘與筆記
 - 🔄 RSS 訂閱最新心得
 - 📦 資料匯出(books.json)
-- 🔍 書庫搜尋與篩選(見下方說明)
+- 🔍 書庫模糊搜尋與篩選(Fuse.js,涵蓋心得與書摘)
+- 📅 年度閱讀回顧與明確日期閱讀日曆
+- 🪪 書籍專屬社群分享圖片
+- 🌙 詳情頁夜間閱讀模式
+- 📱 行動版文章目錄
+- 🧷 首頁「最近書摘」側欄
+- 🔗 社群分享 meta(Open Graph / Twitter Card)
+- 🗺️ sitemap.xml / robots.txt /自訂 404 頁
 
 ## 快速開始
 
@@ -61,6 +68,7 @@ finishedAt: 2025-01-20
 | `startedAt`, `finishedAt` | — | 日期 YYYY-MM-DD |
 | `progress.currentPage`/`totalPages` | — | 正在讀時的進度 |
 | `readingMinutes` | — | 閱讀時數,統計用 |
+| `readingDates` | — | 實際閱讀日期陣列,供閱讀日曆使用 |
 | `cover` | — | 封面路徑,見下 |
 
 Markdown body 建議用 `## 心得` 與 `## 書摘與筆記` 兩個章節,網站會自動渲染。
@@ -86,6 +94,10 @@ Markdown body 建議用 `## 心得` 與 `## 書摘與筆記` 兩個章節,網站
 
 - 所有資料都只是「檔案」,在 `src/content/books/` 底下
 - 網站本身提供 `/export/books.json` 下載,方便結構化備份
+
+## 搜尋與篩選說明
+
+書庫頁以 **Fuse.js** 進行模糊全文搜尋(書名 / 作者 / 標籤 / 心得與書摘),支援錯字容錯,並可同時搭配狀態、標籤、最低評分篩選與排序。篩選條件會同步到網址列,方便分享當下的檢視。
 
 ## 書籍留言區(Giscus)
 
