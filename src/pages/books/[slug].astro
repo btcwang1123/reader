@@ -58,7 +58,7 @@ const metaRows = [
 const tableOfContents = headings.filter((heading) => heading.depth === 2 || heading.depth === 3);
 ---
 
-<Layout title={title} description={`${title}，${author}著。閱讀心得與書摘。`} image={`/og/${encodeURIComponent(book.id)}.png`}>
+<Layout title={title} description={`${title}，${author}著。閱讀心得與書摘。`} image={`/og/${encodeURIComponent(book.id)}.png`} nightMode>
   <div class="fixed left-0 z-40 h-0.5 w-0 bg-clay transition-[width] duration-100" style="top:var(--header-h)" data-reading-progress aria-hidden="true"></div>
 
   <nav class="mb-8 flex items-center gap-2 text-sm text-stone-400" aria-label="麵包屑">
@@ -269,7 +269,6 @@ const tableOfContents = headings.filter((heading) => heading.depth === 2 || head
       }
       applyNight();
     });
-    if (localStorage.getItem('reader-night') === 'on') nightRoot.setAttribute('data-night', '');
     applyNight();
 
     function updateProgress() {

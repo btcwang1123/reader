@@ -5,6 +5,8 @@ publisher: "出版社"
 publishedYear: 2024
 isbn: "978XXXXXXXXXX"
 cover: "/covers/xxx.jpg"
+# 全書總頁數,統計「累積頁數」用
+pages: 320
 status: finished / reading / wantToRead
 rating: 4
 startedAt: 2025-01-01

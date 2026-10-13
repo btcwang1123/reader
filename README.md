@@ -66,6 +66,7 @@ finishedAt: 2025-01-20
 | `rating` | — | 已讀時建議填,1–5、0.5 步進 |
 | `tags` | — | 標籤陣列,自動產生標籤頁 |
 | `startedAt`, `finishedAt` | — | 日期 YYYY-MM-DD |
+| `pages` | — | 全書總頁數,統計「累積頁數」用 |
 | `progress.currentPage`/`totalPages` | — | 正在讀時的進度 |
 | `readingMinutes` | — | 閱讀時數,統計用 |
 | `readingDates` | — | 實際閱讀日期陣列,供閱讀日曆使用 |

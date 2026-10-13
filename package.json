@@ -10,6 +10,7 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
+    "check": "astro check",
     "new-book": "node scripts/new-book.mjs",
     "fetch-cover": "node scripts/fetch-cover.mjs",
     "share-card": "node scripts/share-card.mjs"
@@ -26,6 +27,9 @@
     "esbuild": true
   },
   "devDependencies": {
-    "sharp": "^0.35.5"
+    "@astrojs/check": "^0.9.10",
+    "@types/node": "^22.20.5",
+    "sharp": "^0.35.5",
+    "typescript": "^6.0.3"
   }
 }

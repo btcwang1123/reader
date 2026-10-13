@@ -14,6 +14,8 @@ const books = defineCollection({
     publisher: z.string().optional(),
     publishedYear: z.number().optional(),
     cover: z.string().optional(),
+    // 全書總頁數;未填時退回 progress.totalPages
+    pages: z.number().int().positive().optional(),
     // 閱讀狀態
     status: z.enum(['wantToRead', 'reading', 'finished']),
     rating: z.number().min(1).max(5).multipleOf(0.5).optional(),
