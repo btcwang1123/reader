@@ -16,11 +16,21 @@ const books = defineCollection({
     cover: z.string().optional(),
     // 全書總頁數;未填時退回 progress.totalPages
     pages: z.number().int().positive().optional(),
-    // 閱讀狀態
-    status: z.enum(['wantToRead', 'reading', 'finished']),
+    // 閱讀狀態;abandoned = 棄讀
+    status: z.enum(['wantToRead', 'reading', 'finished', 'abandoned']),
     rating: z.number().min(1).max(5).multipleOf(0.5).optional(),
     startedAt: z.coerce.date().optional(),
     finishedAt: z.coerce.date().optional(),
+    // 重讀紀錄:第一次讀完記在 startedAt/finishedAt,之後每讀完一次加一筆
+    rereads: z
+      .array(
+        z.object({
+          startedAt: z.coerce.date().optional(),
+          finishedAt: z.coerce.date(),
+          note: z.string().optional()
+        })
+      )
+      .default([]),
     progress: z
       .object({
         currentPage: z.number(),
@@ -35,4 +45,17 @@ const books = defineCollection({
   })
 });
 
-export const collections = { books };
+// 書單 / 系列:每份書單一個 Markdown 檔,books 依序列出書的 slug(檔名)或書名
+const lists = defineCollection({
+  loader: glob({
+    pattern: ['**/*.md', '!**/_*'],
+    base: './src/content/lists'
+  }),
+  schema: z.object({
+    title: z.string(),
+    description: z.string().optional(),
+    books: z.array(z.string()).default([])
+  })
+});
+
+export const collections = { books, lists };

@@ -3,19 +3,20 @@ import Layout from '../../layouts/Layout.astro';
 import BookCard from '../../components/BookCard.astro';
 import Stars from '../../components/Stars.astro';
 import { getCollection } from 'astro:content';
-import { firstQuote, totalPagesOf } from '../../utils/books';
+import { firstQuote, totalPagesOf, readEvents } from '../../utils/books';
 
 export async function getStaticPaths() {
   const all = await getCollection('books');
-  const years = [...new Set(all.flatMap((book) => book.data.finishedAt ? [book.data.finishedAt.getFullYear()] : []))].sort((a, b) => b - a);
+  const years = [...new Set(readEvents(all).map((event) => event.finishedAt.getFullYear()))].sort((a, b) => b - a);
   return years.map((year) => ({ params: { year: String(year) } }));
 }
 
 const all = await getCollection('books');
 const year = Number(Astro.params.year);
-const books = all
-  .filter((book) => book.data.status === 'finished' && book.data.finishedAt?.getFullYear() === year)
-  .sort((a, b) => (a.data.finishedAt?.getTime() ?? 0) - (b.data.finishedAt?.getTime() ?? 0));
+// 這一年每一次讀完(含重讀);同一本書這年讀兩次只列一張卡片,但本數算兩次
+const yearEvents = readEvents(all).filter((event) => event.finishedAt.getFullYear() === year);
+const books = [...new Set(yearEvents.map((event) => event.book))];
+const rereadCount = yearEvents.filter((event) => event.reread).length;
 const BASE = import.meta.env.BASE_URL;
 const pages = books.reduce((sum, book) => sum + totalPagesOf(book), 0);
 const minutes = books.reduce((sum, book) => sum + (book.data.readingMinutes ?? 0), 0);
@@ -25,14 +26,14 @@ const tags = new Map<string, number>();
 for (const book of books) for (const tag of book.data.tags) tags.set(tag, (tags.get(tag) ?? 0) + 1);
 const topTags = [...tags.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
 const months = Array.from({ length: 12 }, (_, i) => ({
-  label: `${i + 1}月`, count: books.filter((book) => book.data.finishedAt?.getMonth() === i).length
+  label: `${i + 1}月`, count: yearEvents.filter((event) => event.finishedAt.getMonth() === i).length
 }));
 const maxMonth = Math.max(...months.map(({ count }) => count), 1);
 const highestRated = [...rated].sort((a, b) => (b.data.rating ?? 0) - (a.data.rating ?? 0))[0];
 const quotes = [...books].reverse().map((book) => ({ book, quote: firstQuote(book.body ?? '') })).filter((item) => item.quote).slice(0, 3);
 ---
 
-<Layout title={`${year} 年度閱讀回顧`} description={`${year} 年度閱讀回顧：讀完 ${books.length} 本書，回望這一年的閱讀足跡。`}>
+<Layout title={`${year} 年度閱讀回顧`} description={`${year} 年度閱讀回顧：讀完 ${yearEvents.length} 本書，回望這一年的閱讀足跡。`}>
   <nav class="mb-8 flex items-center gap-2 text-sm text-stone-400" aria-label="麵包屑">
     <a href={`${BASE}stats/`} class="transition hover:text-clay">閱讀足跡</a><span aria-hidden="true">/</span><span class="text-stone-600">{year} 年度回顧</span>
   </nav>
@@ -41,12 +42,12 @@ const quotes = [...books].reverse().map((book) => ({ book, quote: firstQuote(boo
     <p class="relative text-xs font-bold uppercase tracking-[0.24em] text-orange-300">A year between the pages</p>
     <h1 class="relative mt-4 font-serif text-4xl font-semibold sm:text-6xl">{year}，讀過的日子</h1>
     <p class="relative mt-4 max-w-xl text-sm leading-7 text-stone-300">每一本讀完的書，都是這一年留下的一道折痕。這是你的年度閱讀切片。</p>
-    <p class="relative mt-8 font-serif text-2xl text-orange-100">{books.length} <span class="text-base text-stone-300">本書，{rated.length ? `平均 ${average!.toFixed(1)} 顆星` : '留下了閱讀的痕跡'}</span></p>
+    <p class="relative mt-8 font-serif text-2xl text-orange-100">{yearEvents.length} <span class="text-base text-stone-300">本書，{rated.length ? `平均 ${average!.toFixed(1)} 顆星` : '留下了閱讀的痕跡'}</span></p>
   </header>
 
   <section class="mb-10 grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="年度摘要">
     {[
-      { label: '讀完本數', value: String(books.length), unit: '本' },
+      { label: rereadCount ? `讀完本數(含重讀 ${rereadCount})` : '讀完本數', value: String(yearEvents.length), unit: '本' },
       { label: '累積頁數', value: pages.toLocaleString(), unit: '頁' },
       { label: '閱讀時數', value: (minutes / 60).toFixed(1), unit: '小時' },
       { label: '平均評分', value: average?.toFixed(1) ?? '—', unit: average ? '/ 5' : '' }

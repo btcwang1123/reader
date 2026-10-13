@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getCollection } from 'astro:content';
+import { authorSlug, readEvents } from '../utils/books';
 
 export const prerender = true;
 
@@ -9,8 +10,9 @@ export const GET: APIRoute = async () => {
   const site = (import.meta.env.SITE ?? '').replace(/\/$/, '');
   const books = await getCollection('books');
   const tags = [...new Set(books.flatMap((book) => book.data.tags))];
+  const lists = await getCollection('lists');
   // 與 recap/[year].astro 的 getStaticPaths 相同條件
-  const years = [...new Set(books.flatMap((book) => book.data.finishedAt ? [book.data.finishedAt.getFullYear()] : []))];
+  const years = [...new Set(readEvents(books).map((event) => event.finishedAt.getFullYear()))];
 
   // 書庫頁排在前面,其它靜態頁
   const pages = [
@@ -21,7 +23,12 @@ export const GET: APIRoute = async () => {
     'calendar/',
     'about/',
     'export/',
+    'quotes/',
+    'lists/',
+    'authors/',
     ...books.map((book) => `books/${encodeURIComponent(book.id)}/`),
+    ...lists.map((list) => `lists/${encodeURIComponent(list.id)}/`),
+    ...[...new Set(books.map((book) => book.data.author))].map((author) => `authors/${encodeURIComponent(authorSlug(author))}/`),
     ...tags.map((tag) => `tags/${encodeURIComponent(tag)}/`),
     ...years.map((year) => `recap/${year}/`)
   ];

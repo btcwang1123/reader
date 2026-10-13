@@ -7,7 +7,7 @@ isbn: "978XXXXXXXXXX"
 cover: "/covers/xxx.jpg"
 # 全書總頁數,統計「累積頁數」用
 pages: 320
-status: finished / reading / wantToRead
+status: finished / reading / wantToRead / abandoned(棄讀)
 rating: 4
 startedAt: 2025-01-01
 finishedAt: 2025-01-20
@@ -18,6 +18,11 @@ tags: ["分類一", "分類二"]
 readingMinutes: 600
 # 可選:只填實際有閱讀的日期,閱讀日曆才會統計
 readingDates: [2025-01-01, 2025-01-03, 2025-01-05]
+# 可選:重讀紀錄,第一次讀完記在 startedAt/finishedAt,之後每讀完一次加一筆
+rereads:
+  - startedAt: 2026-03-01
+    finishedAt: 2026-03-15
+    note: "第二次讀,更有感"
 ---
 
 ## 心得

@@ -4,7 +4,10 @@ import Stars from '../../components/Stars.astro';
 import BookCard from '../../components/BookCard.astro';
 import Giscus from '../../components/Giscus.astro';
 import { getCollection, render } from 'astro:content';
-import { STATUS_LABELS, readingDays, sortByFinishedAsc, finished, type Book } from '../../utils/books';
+import {
+  STATUS_LABELS, STATUS_STYLES, readingDays, sortByFinishedAsc, finished, totalPagesOf, pagesPerDay, authorSlug, type Book
+} from '../../utils/books';
+import { listsContaining } from '../../utils/lists';
 
 export async function getStaticPaths() {
   const books = await getCollection('books');
@@ -34,14 +37,24 @@ const nextBook =
 
 const {
   title, author, cover, status, rating, tags, isbn, publisher, publishedYear,
-  startedAt, finishedAt, progress, readingMinutes
+  startedAt, finishedAt, progress, readingMinutes, rereads
 } = book.data;
 const BASE = import.meta.env.BASE_URL;
-const statusBadgeStyle = {
-  finished: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
-  reading: 'bg-sky-50 text-sky-700 ring-sky-600/20',
-  wantToRead: 'bg-stone-100 text-stone-600 ring-stone-300/70'
-}[status];
+const statusBadgeStyle = STATUS_STYLES[status];
+const memberOf = await listsContaining(book);
+const formatDate = (date: Date) => date.toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' });
+const pages = totalPagesOf(book);
+const speed = pagesPerDay(book);
+// 想讀/正在讀的書提供書店與圖書館查詢;有 ISBN 用 ISBN 查比較準
+const lookupKey = encodeURIComponent(isbn ?? title);
+const lookupLinks = status === 'wantToRead' || status === 'reading'
+  ? [
+      { label: '博客來', href: `https://search.books.com.tw/search/query/key/${lookupKey}/cat/all` },
+      { label: '讀冊', href: `https://www.taaze.tw/rwd_searchResult.html?keyType%5B%5D=0&keyword%5B%5D=${lookupKey}` },
+      { label: '台北市圖', href: `https://book.tpml.edu.tw/search?searchField=${isbn ? 'ISBN' : 'FullText'}&searchInput=${lookupKey}` },
+      { label: 'Google 圖書', href: `https://www.google.com/search?tbm=bks&q=${isbn ? `isbn:${isbn}` : lookupKey}` }
+    ]
+  : [];
 const progressPercent = progress
   ? Math.min(100, Math.round((progress.currentPage / progress.totalPages) * 100))
   : 0;
@@ -50,22 +63,26 @@ const metaRows = [
   publisher && ['出版社', publisher],
   publishedYear && ['出版年份', String(publishedYear)],
   isbn && ['ISBN', isbn],
-  startedAt && ['開始閱讀', startedAt.toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' })],
-  finishedAt && ['讀完日期', finishedAt.toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' })],
+  pages && ['總頁數', `${pages.toLocaleString()} 頁`],
+  startedAt && ['開始閱讀', formatDate(startedAt)],
+  finishedAt && [status === 'abandoned' ? '棄讀日期' : '讀完日期', formatDate(finishedAt)],
   daysSpent && ['花費天數', `${daysSpent} 天`],
+  speed && ['閱讀速度', `每天 ${speed.toFixed(speed < 10 ? 1 : 0)} 頁`],
   readingMinutes && ['閱讀時間', `${(readingMinutes / 60).toFixed(1)} 小時`]
 ].filter(Boolean) as [string, string][];
 const tableOfContents = headings.filter((heading) => heading.depth === 2 || heading.depth === 3);
 ---
 
-<Layout title={title} description={`${title}，${author}著。閱讀心得與書摘。`} image={`/og/${encodeURIComponent(book.id)}.png`} nightMode>
+<Layout title={title} description={`${title}，${author}著。閱讀心得與書摘。`} image={`/og/${encodeURIComponent(book.id)}.png`} searchable>
   <div class="fixed left-0 z-40 h-0.5 w-0 bg-clay transition-[width] duration-100" style="top:var(--header-h)" data-reading-progress aria-hidden="true"></div>
 
-  <nav class="mb-8 flex items-center gap-2 text-sm text-stone-400" aria-label="麵包屑">
+  <nav class="mb-8 flex items-center gap-2 text-sm text-stone-400" aria-label="麵包屑" data-pagefind-ignore>
     <a href={`${BASE}books/`} class="transition hover:text-clay">書庫</a>
     <span class="text-stone-300" aria-hidden="true">/</span>
     <span class="truncate text-stone-600">{title}</span>
   </nav>
+  <!-- 站內搜尋結果用:以書的 slug 對應書庫卡片 -->
+  <span hidden data-pagefind-meta={`slug:${book.id}`}></span>
 
   <section class="relative mb-12 overflow-hidden rounded-[2rem] bg-stone-900 p-6 text-white shadow-xl shadow-stone-900/10 sm:p-10">
     <div class="absolute inset-0 opacity-50" aria-hidden="true" style="background-image:radial-gradient(circle at 75% 10%,rgba(193,99,63,.45),transparent 30%),linear-gradient(120deg,transparent 55%,rgba(255,255,255,.035) 55%)"></div>
@@ -88,7 +105,7 @@ const tableOfContents = headings.filter((heading) => heading.depth === 2 || head
       <div class="min-w-0 flex-1">
         <span class={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold ring-1 ${statusBadgeStyle}`}>{STATUS_LABELS[status]}</span>
         <h1 class="mt-4 font-serif text-4xl font-semibold leading-tight tracking-[-0.03em] text-white sm:text-5xl">{title}</h1>
-        <p class="mt-3 text-base text-stone-300">{author}</p>
+        <p class="mt-3 text-base text-stone-300"><a href={`${BASE}authors/${encodeURIComponent(authorSlug(author))}/`} class="transition hover:text-orange-200">{author}</a></p>
 
         {rating && <div class="mt-5"><Stars rating={rating} showValue /></div>}
 
@@ -123,9 +140,44 @@ const tableOfContents = headings.filter((heading) => heading.depth === 2 || head
     </dl>
   )}
 
+  {(rereads.length > 0 || memberOf.length > 0 || lookupLinks.length > 0) && (
+    <div class="mb-10 grid gap-4 md:grid-cols-2" data-pagefind-ignore="all">
+      {rereads.length > 0 && (
+        <section class="surface rounded-2xl p-5">
+          <p class="eyebrow">Read again</p>
+          <h2 class="mt-2 font-serif text-lg font-semibold text-stone-900">閱讀紀錄 · 共 {rereads.length + 1} 次</h2>
+          <ol class="mt-4 space-y-2 text-sm text-stone-600">
+            <li>第 1 次:{finishedAt ? formatDate(finishedAt) : '日期未記錄'}</li>
+            {rereads.map((reread, index) => (
+              <li>第 {index + 2} 次:{formatDate(reread.finishedAt)}{reread.note && <span class="text-stone-400"> — {reread.note}</span>}</li>
+            ))}
+          </ol>
+        </section>
+      )}
+      {memberOf.length > 0 && (
+        <section class="surface rounded-2xl p-5">
+          <p class="eyebrow">Part of</p>
+          <h2 class="mt-2 font-serif text-lg font-semibold text-stone-900">收錄於書單</h2>
+          <div class="mt-4 flex flex-wrap gap-2">
+            {memberOf.map((list) => <a href={`${BASE}lists/${list.id}/`} class="chip">{list.data.title}</a>)}
+          </div>
+        </section>
+      )}
+      {lookupLinks.length > 0 && (
+        <section class="surface rounded-2xl p-5">
+          <p class="eyebrow">Find this book</p>
+          <h2 class="mt-2 font-serif text-lg font-semibold text-stone-900">去哪裡找這本書</h2>
+          <div class="mt-4 flex flex-wrap gap-2">
+            {lookupLinks.map((link) => <a href={link.href} target="_blank" rel="noopener noreferrer" class="chip">{link.label} ↗</a>)}
+          </div>
+        </section>
+      )}
+    </div>
+  )}
+
   <div class:list={['grid gap-8', tableOfContents.length > 0 && 'lg:grid-cols-[13rem_minmax(0,1fr)]']}>
     {tableOfContents.length > 0 && (
-      <aside class="hidden lg:block">
+      <aside class="hidden lg:block" data-pagefind-ignore="all">
         <div class="sticky top-28">
           <p class="eyebrow">In this note</p>
           <nav class="mt-4 border-l border-stone-200" aria-label="文章目錄">
@@ -141,7 +193,7 @@ const tableOfContents = headings.filter((heading) => heading.depth === 2 || head
 
     <div>
       {tableOfContents.length > 0 && (
-        <details class="mb-4 rounded-2xl border border-stone-200/80 bg-white/60 px-4 py-3 lg:hidden">
+        <details class="mb-4 rounded-2xl border border-stone-200/80 bg-white/60 px-4 py-3 lg:hidden" data-pagefind-ignore="all">
           <summary class="flex cursor-pointer items-center justify-between text-sm font-medium text-stone-700 select-none">
             <span>本頁目錄</span>
             <span class="text-xs text-stone-400" aria-hidden="true">展開</span>
@@ -159,23 +211,13 @@ const tableOfContents = headings.filter((heading) => heading.depth === 2 || head
         </details>
       )}
 
-      <div class="mb-3 flex items-center justify-end gap-2" aria-label="閱讀工具">
+      <div class="mb-3 flex items-center justify-end gap-2" aria-label="閱讀工具" data-pagefind-ignore="all">
         <span class="mr-1 text-xs text-stone-400">字級</span>
         <button type="button" data-font="decrease" class="grid size-8 place-items-center rounded-full border border-stone-200 bg-white text-sm text-stone-600 transition hover:border-orange-300 hover:text-clay" aria-label="縮小字級">A−</button>
         <button type="button" data-font="increase" class="grid size-8 place-items-center rounded-full border border-stone-200 bg-white text-sm text-stone-600 transition hover:border-orange-300 hover:text-clay" aria-label="放大字級">A+</button>
         <button type="button" data-copy-link class="ml-2 inline-flex items-center gap-1.5 rounded-full border border-stone-200 bg-white px-3 py-1.5 text-xs text-stone-600 transition hover:border-orange-300 hover:text-clay">
           <svg viewBox="0 0 24 24" class="size-3.5" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 12.5 11.5 16l7-8"/><path d="M16 3h4v4M14 10l6-7M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
           <span>複製連結</span>
-        </button>
-        <button
-          type="button"
-          data-night-toggle
-          aria-pressed="false"
-          class="ml-2 inline-flex items-center gap-1.5 rounded-full border border-stone-200 bg-white px-3 py-1.5 text-xs text-stone-600 transition hover:border-orange-300 hover:text-clay"
-          aria-label="切換夜間閱讀模式"
-        >
-          <svg viewBox="0 0 24 24" class="size-3.5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/></svg>
-          <span data-night-label>夜讀</span>
         </button>
       </div>
       <article data-reading-copy class="surface rounded-[1.5rem] p-6 sm:p-10 lg:p-12">
@@ -187,7 +229,7 @@ const tableOfContents = headings.filter((heading) => heading.depth === 2 || head
   </div>
 
   {(prevBook || nextBook) && (
-    <nav class="mt-16 grid gap-4 border-t border-stone-200 pt-10 sm:grid-cols-2" aria-label="編年史前後導覽">
+    <nav class="mt-16 grid gap-4 border-t border-stone-200 pt-10 sm:grid-cols-2" aria-label="編年史前後導覽" data-pagefind-ignore="all">
       {prevBook ? (
         <a href={`${BASE}books/${prevBook.id}/`} class="surface group rounded-[1.2rem] p-5 transition hover:border-orange-300/80 hover:shadow-md">
           <span class="text-[0.62rem] font-bold uppercase tracking-wider text-stone-400">← 前一本讀完</span>
@@ -206,7 +248,7 @@ const tableOfContents = headings.filter((heading) => heading.depth === 2 || head
   )}
 
   {relatedBooks.length > 0 && (
-    <section class="mt-16 border-t border-stone-200 pt-10">
+    <section class="mt-16 border-t border-stone-200 pt-10" data-pagefind-ignore="all">
       <p class="eyebrow">Keep exploring</p>
       <h2 class="section-title mt-2 mb-6">也許你也會喜歡</h2>
       <div class="grid gap-5 md:grid-cols-2">{relatedBooks.map((related) => <BookCard book={related} />)}</div>
@@ -244,32 +286,14 @@ const tableOfContents = headings.filter((heading) => heading.depth === 2 || head
       }
     });
 
-    // 夜間閱讀模式:data-night 加在 <html>,僅影響閱讀文章本體
-    const nightButton = document.querySelector<HTMLButtonElement>('[data-night-toggle]');
-    const nightLabel = document.querySelector<HTMLElement>('[data-night-label]');
-    const nightRoot = document.documentElement;
-
-    function applyNight() {
-      const on = nightRoot.hasAttribute('data-night');
-      nightButton?.setAttribute('aria-pressed', String(on));
-      if (nightLabel) nightLabel.textContent = on ? '日讀' : '夜讀';
-      nightButton?.setAttribute('aria-label', on ? '切換白日閱讀模式' : '切換夜間閱讀模式');
+    // 全站深淺色切換時,留言區跟著換色
+    window.addEventListener('reader-theme', (event) => {
+      const dark = (event as CustomEvent<{ dark: boolean }>).detail.dark;
       document.querySelector<HTMLIFrameElement>('.giscus-frame')?.contentWindow?.postMessage(
-        { giscus: { setConfig: { theme: on ? 'dark' : 'light' } } },
+        { giscus: { setConfig: { theme: dark ? 'dark' : 'light' } } },
         'https://giscus.app'
       );
-    }
-    nightButton?.addEventListener('click', () => {
-      if (nightRoot.hasAttribute('data-night')) {
-        nightRoot.removeAttribute('data-night');
-        localStorage.setItem('reader-night', 'off');
-      } else {
-        nightRoot.setAttribute('data-night', '');
-        localStorage.setItem('reader-night', 'on');
-      }
-      applyNight();
     });
-    applyNight();
 
     function updateProgress() {
       if (!article || !progressBar) return;

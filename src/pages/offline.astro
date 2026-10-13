@@ -1,0 +1,15 @@
+---
+import Layout from '../layouts/Layout.astro';
+const BASE = import.meta.env.BASE_URL;
+---
+
+<Layout title="目前離線" description="目前沒有網路連線。">
+  <section class="surface mx-auto flex max-w-2xl flex-col items-center rounded-[2rem] px-6 py-20 text-center sm:py-28">
+    <p class="eyebrow">You are offline</p>
+    <h1 class="page-title mt-3">這頁還沒收進口袋。</h1>
+    <p class="mt-4 max-w-md text-sm leading-7 text-stone-500">
+      目前沒有網路連線，這一頁也還沒有離線副本。看過的頁面都會自動保存，等連上網路再翻翻看吧。
+    </p>
+    <a href={BASE} class="mt-9 rounded-full bg-stone-900 px-6 py-2.5 text-sm font-bold text-white transition hover:bg-clay">回到首頁</a>
+  </section>
+</Layout>

@@ -1,0 +1,13 @@
+---
+/** 渲染一本書的心得 Markdown(RSS 全文輸出用) */
+import { render } from 'astro:content';
+import type { Book } from '../utils/books';
+
+interface Props {
+  book: Book;
+}
+
+const { Content } = await render(Astro.props.book);
+---
+
+<Content />

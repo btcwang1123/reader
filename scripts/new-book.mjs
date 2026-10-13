@@ -9,10 +9,11 @@
  * 參數式選項:
  *  --title    書名(必填)
  *  --author   作者(必填)
- *  --status   finished | reading | wantToRead (預設 finished)
+ *  --status   finished | reading | wantToRead | abandoned (預設 finished)
  *  --rating   X.X,1–5 可半星(已讀時建議)
  *  --tags     "科幻,小說"(逗號分隔,可省略)
- *  --isbn     ISBN(可省略)
+ *  --isbn     ISBN(可省略;有填會自動抓封面)
+ *  --no-cover 不要自動抓封面
  *  --started  YYYY-MM-DD(reading 時預設今天;finished 時不填就不寫)
  *  --finished YYYY-MM-DD(finished 時預設今天)
  *  --pages    全書總頁數(統計累積頁數用,可省略)
@@ -25,6 +26,7 @@ import { createInterface } from 'node:readline';
 import { existsSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { fetchCover } from './cover-core.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const BOOKS_DIR = join(__dirname, '..', 'src', 'content', 'books');
@@ -37,16 +39,16 @@ function slugify(str) {
     .replace(/^-+|-+$/g, '');
 }
 
-const VALID_STATUS = ['finished', 'reading', 'wantToRead'];
+const VALID_STATUS = ['finished', 'reading', 'wantToRead', 'abandoned'];
 
 function parseArgs(argv) {
   const opts = {};
   for (let i = 0; i < argv.length; i++) {
-    const m = argv[i].match(/^--([a-zA-Z]+)$/);
+    const m = argv[i].match(/^--([a-zA-Z-]+)$/);
     if (!m) continue;
     const key = m[1];
     const val = argv[i + 1];
-    if (key === 'help' || key === 'force') {
+    if (key === 'help' || key === 'force' || key === 'no-cover') {
       opts[key] = true;
     } else if (val !== undefined && !val.startsWith('--')) {
       opts[key] = val;
@@ -76,6 +78,7 @@ function buildFrontmatter(d) {
     `author: ${yamlStr(d.author)}`
   ];
   if (d.isbn) lines.push(`isbn: ${yamlStr(d.isbn)}`);
+  if (d.cover) lines.push(`cover: ${yamlStr(d.cover)}`);
   if (d.publisher) lines.push(`publisher: ${yamlStr(d.publisher)}`);
   if (d.publishedYear) lines.push(`publishedYear: ${d.publishedYear}`);
   lines.push(`status: ${status}`);
@@ -102,16 +105,20 @@ function buildFrontmatter(d) {
   return `${lines.join('\n')}\n`;
 }
 
-function writeBook(d, force = false) {
+async function writeBook(d, { force = false, cover = true } = {}) {
   const slug = slugify(d.title) || 'untitled';
   const file = join(BOOKS_DIR, `${slug}.md`);
   if (existsSync(file) && !force) {
     console.error(`❌ ${file} 已存在,為避免覆蓋既有心得已停止。確定要覆寫請加 --force。`);
     process.exit(1);
   }
+  if (d.isbn && cover) {
+    console.log('\n🔎 依 ISBN 抓封面…');
+    d.cover = await fetchCover(d.isbn, console.log);
+  }
   writeFileSync(file, buildFrontmatter(d), 'utf8');
   console.log(`\n✅ 已建立 ${file}`);
-  console.log('   封面可放置於 public/covers/,並在 frontmatter 加入 cover 欄位。');
+  if (!d.cover) console.log('   封面可放置於 public/covers/,並在 frontmatter 加入 cover 欄位。');
 }
 
 // ---------- 主流程 ----------
@@ -126,7 +133,7 @@ if (opts.help) {
 
 if (opts.title && opts.author) {
   // 參數式
-  writeBook({
+  await writeBook({
     title: opts.title,
     author: opts.author,
     status: opts.status,
@@ -141,7 +148,7 @@ if (opts.title && opts.author) {
     totalPages: opts.totalPages,
     pages: opts.pages,
     minutes: opts.minutes
-  }, opts.force);
+  }, { force: opts.force, cover: !opts['no-cover'] });
 } else if (process.stdin.isTTY) {
   // 互動式(僅真的有可輸入的終端機時)
   const rl = createInterface({ input: process.stdin, output: process.stdout });
@@ -155,14 +162,14 @@ if (opts.title && opts.author) {
     process.exit(1);
   }
   const status =
-    ((await q('狀態 (finished / reading / wantToRead)[finished]: ')).trim() || 'finished');
+    ((await q('狀態 (finished / reading / wantToRead / abandoned)[finished]: ')).trim() || 'finished');
   const rating =
     status === 'finished' ? (await q('評分 (1–5, 可半星, 可略過): ')).trim() : '';
   const tags = (await q('標籤 (逗號分隔, 可略過): ')).trim();
   const isbn = (await q('ISBN (可略過): ')).trim();
   const pages = (await q('總頁數 (可略過): ')).trim();
   rl.close();
-  writeBook({ title, author, status, rating, tags, isbn, pages });
+  await writeBook({ title, author, status, rating, tags, isbn, pages });
 } else {
   // 無 TTY 且無參數 -> 印說明
   console.log('⚠️  目前沒有可輸入的終端機。請改用參數模式:');

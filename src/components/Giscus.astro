@@ -12,7 +12,7 @@ const configured = Boolean(repo && repoId && category && categoryId);
 const fallbackDiscussionsUrl = `https://github.com/${repo || 'btcwang1123/reader'}/discussions`;
 ---
 
-<section class="mt-16 border-t border-stone-200 pt-10" aria-labelledby="comments-title">
+<section class="mt-16 border-t border-stone-200 pt-10" aria-labelledby="comments-title" data-pagefind-ignore="all">
   <div class="mb-6">
     <p class="eyebrow">Reader discussion</p>
     <h2 id="comments-title" class="section-title mt-2">讀者交流</h2>
@@ -71,7 +71,7 @@ const fallbackDiscussionsUrl = `https://github.com/${repo || 'btcwang1123/reader
         script.dataset.reactionsEnabled = '1';
         script.dataset.emitMetadata = '0';
         script.dataset.inputPosition = 'top';
-        script.dataset.theme = document.documentElement.hasAttribute('data-night') ? 'dark' : 'light';
+        script.dataset.theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
         script.dataset.lang = 'zh-TW';
         script.dataset.loading = 'lazy';
         container.querySelector('[data-giscus-loading]')?.remove();

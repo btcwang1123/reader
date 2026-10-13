@@ -1,5 +1,7 @@
 # build output
 dist/
+# Pagefind 搜尋索引由建置產生
+public/pagefind/
 # generated types
 .astro/
 

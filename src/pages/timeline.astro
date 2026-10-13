@@ -2,18 +2,23 @@
 import Layout from '../layouts/Layout.astro';
 import Stars from '../components/Stars.astro';
 import { getCollection } from 'astro:content';
-import { finished, reading, sortByFinishedAsc, sortByStartedDesc } from '../utils/books';
+import { finished, reading, sortByFinishedAsc, sortByStartedDesc, readEvents, type ReadEvent } from '../utils/books';
 
 const all = await getCollection('books');
 const done = sortByFinishedAsc(finished(all));
+// 時間軸項目:每一次讀完(含重讀),加上已讀但沒有讀完日期的書
+const entries: (ReadEvent | { book: (typeof done)[number]; finishedAt?: undefined; reread: false })[] = [
+  ...readEvents(all),
+  ...done.filter((book) => !book.data.finishedAt).map((book) => ({ book, reread: false as const }))
+];
 const nowReading = sortByStartedDesc(reading(all));
 const BASE = import.meta.env.BASE_URL;
 
-// 總覽:讀完本數、閱讀旅程跨度(第一本到最近一本讀完)、總閱讀時光
-const totalFinished = done.length;
+// 總覽:讀完本數(含重讀)、閱讀旅程跨度(第一本到最近一本讀完)、總閱讀時光
+const totalFinished = entries.length;
 const totalMinutes = done.reduce((sum, book) => sum + (book.data.readingMinutes ?? 0), 0);
-const finishedDates = done
-  .map((book) => book.data.finishedAt?.getTime())
+const finishedDates = entries
+  .map((entry) => entry.finishedAt?.getTime())
   .filter((time): time is number => typeof time === 'number');
 const spanDays = finishedDates.length
   ? Math.round((Math.max(...finishedDates) - Math.min(...finishedDates)) / 86_400_000)
@@ -26,15 +31,15 @@ const overview = [
 ];
 
 // 依年份分段(沒有讀完日期的歸到「時間未定」)
-type YearGroup = { year: number | null; label: string; books: typeof done };
+type YearGroup = { year: number | null; label: string; books: typeof entries };
 const groups: YearGroup[] = [];
-for (const book of done) {
-  const year = book.data.finishedAt?.getFullYear() ?? null;
+for (const entry of entries) {
+  const year = entry.finishedAt?.getFullYear() ?? null;
   const last = groups.at(-1);
   if (last && last.year === year) {
-    last.books.push(book);
+    last.books.push(entry);
   } else {
-    groups.push({ year, label: year ? String(year) : '時間未定', books: [book] });
+    groups.push({ year, label: year ? String(year) : '時間未定', books: [entry] });
   }
 }
 
@@ -72,7 +77,7 @@ const monthLabel = (date?: Date) => (date ? `${date.getMonth() + 1} 月` : '');
             </div>
 
             <ol class="ml-2 border-l-2 border-stone-200 pl-6 sm:pl-8">
-              {group.books.map((book) => (
+              {group.books.map(({ book, finishedAt, reread }) => (
                 <li class="relative mb-5 last:mb-0">
                   <span
                     class="absolute -left-[calc(1.5rem+7px)] top-5 size-3.5 rounded-full border-2 border-white bg-clay shadow-[0_0_0_2px_theme(colors.stone.200)] sm:-left-[calc(2rem+7px)]"
@@ -80,7 +85,8 @@ const monthLabel = (date?: Date) => (date ? `${date.getMonth() + 1} 月` : '');
                   ></span>
                   <article class="surface rounded-[1.2rem] p-4 transition hover:shadow-md sm:p-5">
                     <p class="text-xs font-semibold uppercase tracking-wider text-clay">
-                      {group.year ? `${group.year} · ${monthLabel(book.data.finishedAt)}` : '讀完日期未記錄'}
+                      {group.year ? `${group.year} · ${monthLabel(finishedAt)}` : '讀完日期未記錄'}
+                      {reread && <span class="ml-2 rounded-full bg-orange-50 px-2 py-0.5 normal-case tracking-normal">重讀</span>}
                     </p>
                     <h3 class="mt-1.5 font-serif text-lg font-semibold text-stone-900">
                       <a href={`${BASE}books/${book.id}/`} class="transition hover:text-clay">{book.data.title}</a>

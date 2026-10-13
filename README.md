@@ -14,7 +14,12 @@
 - 🔍 書庫模糊搜尋與篩選(Fuse.js,涵蓋心得與書摘)
 - 📅 年度閱讀回顧與明確日期閱讀日曆
 - 🪪 書籍專屬社群分享圖片
-- 🌙 詳情頁夜間閱讀模式
+- 🌙 全站深色模式(跟隨系統 / 淺色 / 深色)
+- 💬 書摘牆 `/quotes`,每則書摘可下載分享卡圖片
+- 👤 作者頁 `/authors/`、📚 書單與系列 `/lists/`
+- 🔁 棄讀狀態與重讀紀錄
+- 📱 PWA:可加到手機主畫面,看過的頁面可離線瀏覽
+- ✏️ Pages CMS:用網頁或手機新增、編輯書
 - 📱 行動版文章目錄
 - 🧷 首頁「最近書摘」側欄
 - 🔗 社群分享 meta(Open Graph / Twitter Card)
@@ -62,7 +67,7 @@ finishedAt: 2025-01-20
 | 欄位 | 必填 | 說明 |
 |---|---|---|
 | `title`, `author` | ✅ | 書名與作者 |
-| `status` | ✅ | `wantToRead` / `reading` / `finished` |
+| `status` | ✅ | `wantToRead` / `reading` / `finished` / `abandoned`(棄讀) |
 | `rating` | — | 已讀時建議填,1–5、0.5 步進 |
 | `tags` | — | 標籤陣列,自動產生標籤頁 |
 | `startedAt`, `finishedAt` | — | 日期 YYYY-MM-DD |
@@ -70,17 +75,47 @@ finishedAt: 2025-01-20
 | `progress.currentPage`/`totalPages` | — | 正在讀時的進度 |
 | `readingMinutes` | — | 閱讀時數,統計用 |
 | `readingDates` | — | 實際閱讀日期陣列,供閱讀日曆使用 |
+| `rereads` | — | 重讀紀錄陣列,每筆 `{ startedAt, finishedAt, note }`;第一次讀完仍記在 `startedAt`/`finishedAt` |
 | `cover` | — | 封面路徑,見下 |
 
 Markdown body 建議用 `## 心得` 與 `## 書摘與筆記` 兩個章節,網站會自動渲染。
 
+## 用網頁或手機編輯(Pages CMS)
+
+1. 到 [app.pagescms.org](https://app.pagescms.org),用 GitHub 登入並授權 `btcwang1123/reader`
+2. 選這個 repo,就能看到「書籍」「書單」「網站設定」三個區塊,直接新增或修改
+3. 存檔會直接 commit 到 GitHub,Actions 自動重建網站(約 2–3 分鐘)
+
+欄位設定在 `.pages.yml`,和 `src/content.config.ts` 對應。
+
+## 書單
+
+在 `src/content/lists/` 新增一個 Markdown 檔:
+
+```md
+---
+title: "投資入門"
+description: "適合剛開始理財的人依序讀"
+books: ["漫步華爾街", "持續買進", "長期買進"]   # 書名或檔名,依閱讀順序
+---
+```
+
+## 年度目標
+
+改 `src/data/site.json` 的 `yearlyGoal`(也可以在 Pages CMS 的「網站設定」改)。
+
 ## 封面
 
 1. 手動:把圖片放到 `public/covers/`,於 frontmatter 填 `cover: "/covers/xxx.jpg"`
-2. 自動:用 ISBN 從 Open Library 抓取
+2. 自動:用 ISBN 抓取,依序嘗試 Google Books、Open Library(台灣書在 Google Books 收錄較多,但不是每本都有)
    ```bash
-   npm run fetch-cover -- 9789866651406
+   npm run fetch-cover -- 9789861755267
    ```
+   `npm run new-book` 填了 ISBN 時也會自動抓,不想抓可加 `--no-cover`。
+
+## 站內搜尋
+
+書庫的搜尋框:書名、作者、標籤用 Fuse.js 即時模糊比對;心得與書摘全文用 [Pagefind](https://pagefind.app/),在 `npm run build` 時建立索引。`npm run dev` 開發模式沒有全文索引,要測試全文搜尋請用 `npm run build && npm run preview`。
 
 ## 部署到 GitHub Pages
 
@@ -98,7 +133,7 @@ Markdown body 建議用 `## 心得` 與 `## 書摘與筆記` 兩個章節,網站
 
 ## 搜尋與篩選說明
 
-書庫頁以 **Fuse.js** 進行模糊全文搜尋(書名 / 作者 / 標籤 / 心得與書摘),支援錯字容錯,並可同時搭配狀態、標籤、最低評分篩選與排序。篩選條件會同步到網址列,方便分享當下的檢視。
+書庫頁以 **Fuse.js**(書名 / 作者 / 標籤,支援錯字容錯)加上 **Pagefind**(心得與書摘全文)搜尋,並可同時搭配狀態、標籤、最低評分篩選與排序。篩選條件會同步到網址列,方便分享當下的檢視。
 
 ## 書籍留言區(Giscus)
 

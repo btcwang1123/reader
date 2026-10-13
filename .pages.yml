@@ -1,0 +1,169 @@
+# Pages CMS 設定:在 https://app.pagescms.org 用 GitHub 登入後,即可用網頁或手機新增、編輯書
+# 欄位對應 src/content.config.ts;改了 schema 記得同步這裡
+media:
+  input: public/covers
+  output: /covers
+  extensions: [jpg, jpeg, png, webp]
+  categories: [image]
+
+content:
+  - name: books
+    label: 書籍
+    type: collection
+    path: src/content/books
+    filename:
+      template: "{primary}.md"
+      field: create
+    exclude: [_TEMPLATE.md]
+    view:
+      fields: [title, author, status, rating, finishedAt]
+      primary: title
+      search: [title, author, tags]
+      default:
+        sort: finishedAt
+        order: desc
+    fields:
+      - name: title
+        label: 書名
+        type: string
+        required: true
+      - name: author
+        label: 作者
+        type: string
+        required: true
+      - name: status
+        label: 閱讀狀態
+        type: select
+        required: true
+        default: wantToRead
+        options:
+          values:
+            - name: wantToRead
+              label: 想讀
+            - name: reading
+              label: 正在讀
+            - name: finished
+              label: 已讀
+            - name: abandoned
+              label: 棄讀
+      - name: rating
+        label: 評分(1–5,可半星)
+        type: number
+        options:
+          min: 1
+          max: 5
+      - name: startedAt
+        label: 開始閱讀
+        type: date
+        options:
+          format: yyyy-MM-dd
+      - name: finishedAt
+        label: 讀完 / 棄讀日期
+        type: date
+        options:
+          format: yyyy-MM-dd
+      - name: tags
+        label: 標籤
+        type: string
+        list: true
+      - name: cover
+        label: 封面
+        type: image
+        description: 也可以留空,之後用 npm run fetch-cover 依 ISBN 自動抓
+      - name: isbn
+        label: ISBN
+        type: string
+      - name: publisher
+        label: 出版社
+        type: string
+      - name: publishedYear
+        label: 出版年
+        type: number
+      - name: pages
+        label: 總頁數
+        type: number
+        options:
+          min: 1
+      - name: progress
+        label: 閱讀進度(正在讀時填)
+        type: object
+        fields:
+          - name: currentPage
+            label: 目前頁數
+            type: number
+          - name: totalPages
+            label: 總頁數
+            type: number
+      - name: readingMinutes
+        label: 閱讀時數(分鐘)
+        type: number
+      - name: readingDates
+        label: 閱讀日期(閱讀日曆用)
+        type: date
+        list: true
+        options:
+          format: yyyy-MM-dd
+      - name: rereads
+        label: 重讀紀錄
+        type: object
+        list:
+          collapsible:
+            collapsed: true
+            summary: "{finishedAt}"
+        fields:
+          - name: startedAt
+            label: 開始
+            type: date
+            options:
+              format: yyyy-MM-dd
+          - name: finishedAt
+            label: 讀完
+            type: date
+            required: true
+            options:
+              format: yyyy-MM-dd
+          - name: note
+            label: 備註
+            type: string
+      - name: body
+        label: 心得與書摘
+        type: rich-text
+        default: "## 心得\n\n\n## 書摘與筆記\n\n> "
+        options:
+          format: markdown
+          media: false
+
+  - name: lists
+    label: 書單
+    type: collection
+    path: src/content/lists
+    filename:
+      template: "{primary}.md"
+      field: create
+    view:
+      fields: [title]
+      primary: title
+    fields:
+      - name: title
+        label: 書單名稱
+        type: string
+        required: true
+      - name: description
+        label: 說明
+        type: text
+      - name: books
+        label: 書(依序;填書名或檔名)
+        type: string
+        list: true
+
+  - name: site
+    label: 網站設定
+    type: file
+    path: src/data/site.json
+    format: json
+    fields:
+      - name: yearlyGoal
+        label: 年度閱讀目標(本)
+        type: number
+        options:
+          min: 1

@@ -81,31 +81,63 @@
 .prose blockquote { border-radius: 0 1rem 1rem 0; background: #fbf3e8; padding: 1.1rem 1.4rem; font-family: var(--font-serif); font-style: normal; }
 .prose code:not(pre code) { border-radius: 0.35rem; background: #eee9df; padding: 0.15rem 0.35rem; font-size: 0.85em; }
 
-/* 夜間閱讀模式:套用到詳情頁整頁(頁首、頁尾、卡片與文章) */
-html[data-night] { color-scheme: dark; }
-html[data-night] body { background-color: #171412; background-image: none; color: #d6d3d1; }
-html[data-night] body::before { opacity: 0.08; }
-html[data-night] .site-header { background: rgb(23 20 18 / 0.88); border-color: #2c2622; }
-html[data-night] .site-header a:not([aria-current]) { color: #a8a29e; }
-html[data-night] .site-header a:not([aria-current]):hover { background: #2a2420; color: #eeb4a1; }
-html[data-night] .site-header [aria-current] { background: #f5f5f4; color: #1c1917; }
-html[data-night] .site-header .text-stone-900 { color: #f5f5f4; }
-html[data-night] .site-footer { background: #1c1917; border-color: #2c2622; }
-html[data-night] .site-footer .text-stone-800 { color: #e7e5e4; }
-html[data-night] .surface,
-html[data-night] .book-card,
-html[data-night] [data-reading-copy],
-html[data-night] main details,
-html[data-night] main button { background: #211d1a; border-color: #2c2622; }
-html[data-night] main .text-stone-900,
-html[data-night] main .text-stone-800,
-html[data-night] main .text-stone-700 { color: #f5f5f4; }
-html[data-night] main .text-stone-600,
-html[data-night] main .text-stone-500 { color: #a8a29e; }
-html[data-night] main .border-stone-200,
-html[data-night] main .border-stone-100 { border-color: #2c2622; }
-html[data-night] main .bg-stone-100\/90 { background: #2a2420; color: #a8a29e; }
-html[data-night] .prose {
+/*
+ * 全站深色模式:html[data-theme="dark"]
+ * 做法是把 Tailwind 的色票變數換成深色版(stone 色階反轉、white 變成深色卡片底),
+ * 所有 text-/bg-/border- 工具類別會自動跟著變,不用每頁各寫一份。
+ */
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --color-paper: #171412;
+  --color-ink: #e7e5e4;
+  --color-white: #211d1a;
+  --color-stone-50: #1f1b18;
+  --color-stone-100: #2a2420;
+  --color-stone-200: #36302b;
+  --color-stone-300: #4a433d;
+  --color-stone-400: #8f8983;
+  --color-stone-500: #a8a29e;
+  --color-stone-600: #c4beb9;
+  --color-stone-700: #d6d3d1;
+  --color-stone-800: #e7e5e4;
+  --color-stone-900: #f5f5f4;
+  --color-stone-950: #fafaf9;
+  --color-orange-50: #2e231c;
+  --color-orange-100: #3a2a20;
+  --color-amber-100: #3a3020;
+}
+html[data-theme="dark"] body { background-image: none; }
+html[data-theme="dark"] body::before { opacity: 0.08; }
+html[data-theme="dark"] .bg-\[\#d9e0d4\] { background-color: #232a22; }
+
+/*
+ * 「深色島」:主視覺區塊(bg-stone-900)與書封本來就是深底白字,
+ * 在深色模式裡把色票還原成淺色模式的值,讓它們維持原本的樣子。
+ */
+html[data-theme="dark"] .bg-stone-900,
+html[data-theme="dark"] .book-cover-shadow {
+  --color-white: #fff;
+  --color-stone-50: #fafaf9;
+  --color-stone-100: #f5f5f4;
+  --color-stone-200: #e7e5e4;
+  --color-stone-300: #d6d3d1;
+  --color-stone-400: #a8a29e;
+  --color-stone-500: #78716c;
+  --color-stone-600: #57534e;
+  --color-stone-700: #44403c;
+  --color-stone-800: #292524;
+  --color-stone-900: #0f0d0b;
+  --color-stone-950: #0c0a09;
+  --color-orange-100: #ffedd5;
+}
+/* 導覽列目前頁面的按鈕:深色模式改成淺底深字,才看得出來 */
+html[data-theme="dark"] .site-header [aria-current] { background: #f5f5f4; color: #1c1917; }
+/* 淺橘底的日曆格子維持深色字 */
+html[data-theme="dark"] .bg-orange-200 { --color-stone-800: #292524; }
+
+html[data-theme="dark"] .prose blockquote { background: #2a2420; }
+html[data-theme="dark"] .prose h2 { border-bottom-color: #36302b; }
+html[data-theme="dark"] .prose {
   color: #d6d3d1;
   --tw-prose-body: #d6d3d1;
   --tw-prose-headings: #f5f5f4;
@@ -123,12 +155,9 @@ html[data-night] .prose {
   --tw-prose-th-borders: #44403c;
   --tw-prose-td-borders: #292524;
 }
-html[data-night] .prose h1, html[data-night] .prose h2, html[data-night] .prose h3,
-html[data-night] .prose h4 { color: #f5f5f4; }
-html[data-night] .prose blockquote { background: #2a2420; }
-html[data-night] .prose code:not(pre code) { background: #2a2420; color: #fafaf9; }
-html[data-night] .prose a { text-decoration-color: rgb(238 180 161 / 0.4); }
-html[data-night] .prose mark { background: #57534e; color: #fafaf9; }
+html[data-theme="dark"] .prose code:not(pre code) { background: #2a2420; color: #fafaf9; }
+html[data-theme="dark"] .prose a { text-decoration-color: rgb(238 180 161 / 0.4); }
+html[data-theme="dark"] .prose mark { background: #57534e; color: #fafaf9; }
 .no-scrollbar { scrollbar-width: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
 [hidden] { display: none !important; }

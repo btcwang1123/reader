@@ -3,10 +3,13 @@ import Layout from '../layouts/Layout.astro';
 import BookCard from '../components/BookCard.astro';
 import Stars from '../components/Stars.astro';
 import { getCollection } from 'astro:content';
-import { sortByStartedDesc, finished, firstQuote } from '../utils/books';
+import { sortByStartedDesc, finished, firstQuote, readEvents } from '../utils/books';
 
 const all = sortByStartedDesc(await getCollection('books'));
-const finishedBooks = all.filter((book) => book.data.status === 'finished');
+// 最近讀完:依讀完日期由新到舊
+const finishedBooks = finished(all).sort(
+  (a, b) => (b.data.finishedAt?.getTime() ?? 0) - (a.data.finishedAt?.getTime() ?? 0)
+);
 // 最近完成且有書摘的書(依完成日期由新到舊)
 const quotedBooks = finished(all)
   .filter((book) => firstQuote(book.body ?? ''))
@@ -15,9 +18,8 @@ const quotedBooks = finished(all)
 const readingBooks = all.filter((book) => book.data.status === 'reading');
 const wantToReadBooks = all.filter((book) => book.data.status === 'wantToRead');
 const currentYear = new Date().getFullYear();
-const finishedThisYear = finishedBooks.filter(
-  (book) => book.data.finishedAt?.getFullYear() === currentYear
-);
+// 重讀也算一次讀完
+const finishedThisYear = readEvents(all).filter((event) => event.finishedAt.getFullYear() === currentYear);
 const totalMinutes = finishedBooks.reduce((sum, book) => sum + (book.data.readingMinutes ?? 0), 0);
 const BASE = import.meta.env.BASE_URL;
 

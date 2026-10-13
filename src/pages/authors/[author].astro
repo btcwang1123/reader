@@ -1,0 +1,35 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import BookCard from '../../components/BookCard.astro';
+import { getCollection } from 'astro:content';
+import { authorSlug, sortByStartedDesc, type Book } from '../../utils/books';
+
+export async function getStaticPaths() {
+  const books = await getCollection('books');
+  const authors = [...new Set(books.map((book) => book.data.author))];
+  return authors.map((author) => ({
+    params: { author: authorSlug(author) },
+    props: { author, books: sortByStartedDesc(books.filter((book) => book.data.author === author)) }
+  }));
+}
+
+const { author, books } = Astro.props as { author: string; books: Book[] };
+const rated = books.filter((book) => book.data.rating);
+const average = rated.length ? rated.reduce((sum, book) => sum + (book.data.rating ?? 0), 0) / rated.length : null;
+const BASE = import.meta.env.BASE_URL;
+---
+
+<Layout title={author} description={`書架上 ${author} 的 ${books.length} 本書。`}>
+  <nav class="mb-8 flex items-center gap-2 text-sm text-stone-400" aria-label="麵包屑">
+    <a href={`${BASE}authors/`} class="transition hover:text-clay">作者</a><span aria-hidden="true">/</span><span class="text-stone-600">{author}</span>
+  </nav>
+
+  <header class="mb-9 flex flex-col gap-4 border-b border-stone-200 pb-8 sm:flex-row sm:items-end sm:justify-between">
+    <div><p class="eyebrow">Author</p><h1 class="page-title mt-3">{author}</h1></div>
+    <p class="text-sm text-stone-500">
+      收藏 <strong class="font-semibold text-stone-800">{books.length}</strong> 本{average && <>，平均 <strong class="font-semibold text-stone-800">{average.toFixed(1)}</strong> 顆星</>}
+    </p>
+  </header>
+
+  <div class="grid gap-5 md:grid-cols-2">{books.map((book) => <BookCard book={book} />)}</div>
+</Layout>

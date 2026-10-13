@@ -2,15 +2,21 @@
 import Layout from '../layouts/Layout.astro';
 import Stars from '../components/Stars.astro';
 import { getCollection } from 'astro:content';
-import { finished, totalPagesOf } from '../utils/books';
+import { finished, totalPagesOf, readEvents, pagesPerDay } from '../utils/books';
+import site from '../data/site.json';
 
 const all = await getCollection('books');
 const done = finished(all);
+// 每年 / 每月統計以「讀完事件」計算,重讀也算一次
+const events = readEvents(all);
 const currentYear = new Date().getFullYear();
 const recapYears = [...new Set(done.flatMap((book) => book.data.finishedAt ? [book.data.finishedAt.getFullYear()] : []))].sort((a, b) => b - a);
 
-// 年度閱讀目標(想調整就改這個數字)
-const YEARLY_GOAL = 24;
+// 年度閱讀目標:在 src/data/site.json 的 yearlyGoal 調整
+const YEARLY_GOAL = site.yearlyGoal;
+const abandonedCount = all.filter((book) => book.data.status === 'abandoned').length;
+const speeds = done.map(pagesPerDay).filter((speed): speed is number => speed !== null);
+const avgSpeed = speeds.length ? speeds.reduce((sum, speed) => sum + speed, 0) / speeds.length : null;
 const totalFinished = done.length;
 const totalPages = done.reduce((sum, book) => sum + totalPagesOf(book), 0);
 const totalMinutes = done.reduce((sum, book) => sum + (book.data.readingMinutes ?? 0), 0);
@@ -20,17 +26,17 @@ const avgRating = rated.length
   : 0;
 
 const years = new Map<number, number>();
-for (const book of done) {
-  const year = book.data.finishedAt?.getFullYear();
-  if (year) years.set(year, (years.get(year) ?? 0) + 1);
+for (const event of events) {
+  const year = event.finishedAt.getFullYear();
+  years.set(year, (years.get(year) ?? 0) + 1);
 }
 const perYear = [...years.entries()].sort((a, b) => a[0] - b[0]);
 const maxYearCount = Math.max(...perYear.map(([, count]) => count), 1);
 
 const months = Array.from({ length: 12 }, (_, index) => ({
   label: `${index + 1}月`,
-  count: done.filter((book) =>
-    book.data.finishedAt?.getFullYear() === currentYear && book.data.finishedAt.getMonth() === index
+  count: events.filter((event) =>
+    event.finishedAt.getFullYear() === currentYear && event.finishedAt.getMonth() === index
   ).length
 }));
 const maxMonthCount = Math.max(...months.map(({ count }) => count), 1);
@@ -76,6 +82,13 @@ const overview = [
     </div>
     <p class="text-sm text-stone-400">資料更新至 {new Date().toLocaleDateString('zh-TW')}</p>
   </header>
+
+  {(avgSpeed || abandonedCount > 0) && (
+    <p class="mb-6 flex flex-wrap gap-x-6 gap-y-1 text-sm text-stone-500">
+      {avgSpeed && <span>平均閱讀速度 <strong class="text-stone-800">每天 {avgSpeed.toFixed(avgSpeed < 10 ? 1 : 0)} 頁</strong>（{speeds.length} 本有頁數與日期）</span>}
+      {abandonedCount > 0 && <span>棄讀 <strong class="text-stone-800">{abandonedCount}</strong> 本</span>}
+    </p>
+  )}
 
   <nav class="mb-8 flex flex-wrap gap-3" aria-label="閱讀回顧導覽">
     <a href={`${BASE}calendar/`} class="rounded-full border border-stone-300 bg-white/70 px-4 py-2 text-sm font-medium text-stone-700 transition hover:border-orange-300 hover:text-clay">打開閱讀日曆 →</a>

@@ -1,0 +1,86 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getAllQuotes } from '../../utils/quotes';
+
+// 最近讀完的書排前面,沒有讀完日期的墊底
+const quotes = (await getAllQuotes()).sort(
+  (a, b) => (b.book.data.finishedAt?.getTime() ?? 0) - (a.book.data.finishedAt?.getTime() ?? 0)
+);
+const BASE = import.meta.env.BASE_URL;
+---
+
+<Layout title="書摘牆" description="收集每一本書裡捨不得忘記的句子。">
+  <header class="mb-9 grid gap-5 md:grid-cols-[1fr_auto] md:items-end">
+    <div>
+      <p class="eyebrow">Words worth keeping</p>
+      <h1 class="page-title mt-3">書摘牆</h1>
+      <p class="mt-4 max-w-xl text-sm leading-7 text-stone-500">每一句被停下來劃線的話。點「分享卡」可以下載成圖片。</p>
+    </div>
+    <p class="font-serif text-lg text-stone-500"><strong class="text-3xl text-stone-900">{quotes.length}</strong> 則書摘</p>
+  </header>
+
+  <label class="relative mb-8 block">
+    <span class="sr-only">搜尋書摘</span>
+    <svg viewBox="0 0 24 24" class="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-stone-400" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+      <circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path>
+    </svg>
+    <input
+      type="search"
+      data-quote-search
+      autocomplete="off"
+      placeholder="搜尋句子、書名或作者…"
+      class="w-full rounded-xl border border-stone-200 bg-white py-3 pl-12 pr-4 text-sm text-stone-800 outline-none transition placeholder:text-stone-400 focus:border-orange-300 focus:ring-4 focus:ring-orange-100/60"
+    />
+  </label>
+
+  <p class="mb-5 text-sm text-stone-500" aria-live="polite">顯示 <strong data-quote-count class="text-stone-800">{quotes.length}</strong> 則</p>
+
+  <div class="columns-1 gap-5 md:columns-2 lg:columns-3">
+    {quotes.map((quote) => (
+      <figure
+        data-quote
+        data-search={`${quote.text} ${quote.book.data.title} ${quote.book.data.author}`.toLowerCase()}
+        class="surface mb-5 break-inside-avoid rounded-[1.35rem] p-6"
+      >
+        <span class="font-serif text-4xl leading-none text-orange-300" aria-hidden="true">“</span>
+        <blockquote class="mt-2 font-serif text-[0.98rem] leading-8 text-stone-700">「{quote.text}」</blockquote>
+        <figcaption class="mt-5 flex items-end justify-between gap-3 border-t border-stone-100 pt-4">
+          <a href={`${BASE}books/${quote.book.id}/#${encodeURIComponent('書摘與筆記')}`} class="min-w-0 transition hover:text-clay">
+            <span class="block truncate font-serif font-semibold text-stone-900">《{quote.book.data.title}》</span>
+            <span class="mt-0.5 block truncate text-xs text-stone-400">{quote.book.data.author}</span>
+          </a>
+          <a
+            href={`${BASE}quotes/${encodeURIComponent(quote.id)}.png`}
+            download={`書摘-${quote.id}.png`}
+            class="shrink-0 rounded-full border border-stone-200 bg-white px-3 py-1.5 text-xs text-stone-600 transition hover:border-orange-300 hover:text-clay"
+          >分享卡 ↓</a>
+        </figcaption>
+      </figure>
+    ))}
+  </div>
+
+  <div data-quote-empty hidden class="surface rounded-[1.5rem] px-6 py-16 text-center">
+    <h2 class="font-serif text-xl font-semibold text-stone-800">沒有符合的書摘</h2>
+    <p class="mt-2 text-sm text-stone-500">換個關鍵字再試試看。</p>
+  </div>
+
+  <script>
+    const input = document.querySelector<HTMLInputElement>('[data-quote-search]');
+    const items = [...document.querySelectorAll<HTMLElement>('[data-quote]')];
+    const count = document.querySelector<HTMLElement>('[data-quote-count]');
+    const empty = document.querySelector<HTMLElement>('[data-quote-empty]');
+
+    function filter() {
+      const query = (input?.value ?? '').trim().toLowerCase();
+      let visible = 0;
+      for (const item of items) {
+        item.hidden = Boolean(query) && !(item.dataset.search ?? '').includes(query);
+        if (!item.hidden) visible += 1;
+      }
+      if (count) count.textContent = String(visible);
+      if (empty) empty.hidden = visible !== 0;
+    }
+
+    input?.addEventListener('input', filter);
+  </script>
+</Layout>

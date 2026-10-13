@@ -156,6 +156,8 @@ Project/Reader/
 >
 > 後續新增年度閱讀回顧(`/recap/[year]`)、明確日期閱讀日曆(`/calendar`)與書籍專屬社群分享圖(`/og/[slug].png`)。閱讀日曆僅使用 `readingDates` 欄位,不推測未記錄的閱讀日。
 
+> 再後續新增:全站深色模式、書摘牆與分享卡(`/quotes`)、作者頁(`/authors`)、書單(`/lists`,資料在 `src/content/lists/`)、棄讀狀態(`abandoned`)與重讀紀錄(`rereads`)、`pages` 總頁數與閱讀速度、Pagefind 全文搜尋、PWA、RSS 全文、Pages CMS(`.pages.yml`)、年度目標設定檔(`src/data/site.json`)、依 ISBN 從 Google Books 抓封面。
+
 ## 10. 已定案事項
 
 - 界面語言:**繁體中文**

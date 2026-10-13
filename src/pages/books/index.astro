@@ -8,17 +8,20 @@ const all = sortByStartedDesc(await getCollection('books'));
 const tags = [...new Set(all.flatMap((book) => book.data.tags))].sort((a, b) =>
   a.localeCompare(b, 'zh-Hant')
 );
-const statuses = ['all', 'reading', 'wantToRead', 'finished'] as const;
-const statusCounts = {
+const countOf = (status: string) => all.filter((book) => book.data.status === status).length;
+// 沒有棄讀的書時不顯示「棄讀」篩選按鈕
+const statuses = ['all', 'reading', 'wantToRead', 'finished', ...(countOf('abandoned') ? ['abandoned'] : [])] as const;
+const statusCounts: Record<string, number> = {
   all: all.length,
-  reading: all.filter((book) => book.data.status === 'reading').length,
-  wantToRead: all.filter((book) => book.data.status === 'wantToRead').length,
-  finished: all.filter((book) => book.data.status === 'finished').length
+  reading: countOf('reading'),
+  wantToRead: countOf('wantToRead'),
+  finished: countOf('finished'),
+  abandoned: countOf('abandoned')
 };
 ---
 
 <Layout title="書庫" description="搜尋、篩選並瀏覽書架裡的每一本書。">
-  <section data-library data-search-index={`${import.meta.env.BASE_URL}search-index.json`}>
+  <section data-library data-pagefind={`${import.meta.env.BASE_URL}pagefind/pagefind.js`}>
     <header class="mb-9 grid gap-5 md:grid-cols-[1fr_auto] md:items-end">
       <div>
         <p class="eyebrow">The collection</p>
@@ -156,40 +159,49 @@ const statusCounts = {
 
       const number = (card: HTMLElement, key: string) => Number(card.dataset[key] ?? 0);
 
-      type Indexed = { el: HTMLElement; title: string; author: string; tags: string[]; notes: string };
-      const indexed: Indexed[] = cards.map((el) => ({
-        el,
-        title: el.dataset.title ?? '',
-        author: el.dataset.author ?? '',
-        tags: el.dataset.tags?.split('|') ?? [],
-        notes: ''
-      }));
-      // 書名、作者與筆記內容都可模糊搜尋,基本書目權重稍高
-      const fuseOptions = {
-        keys: [
-          { name: 'title', weight: 0.35 },
-          { name: 'author', weight: 0.15 },
-          { name: 'tags', weight: 0.1 },
-          { name: 'notes', weight: 0.4 }
-        ],
-        threshold: 0.45,
-        ignoreLocation: true
-      };
-      let fuse = new Fuse(indexed, fuseOptions);
+      // 書名、作者、標籤:Fuse.js 即時模糊比對(可容錯字)
+      const fuse = new Fuse(
+        cards.map((el) => ({
+          el,
+          title: el.dataset.title ?? '',
+          author: el.dataset.author ?? '',
+          tags: el.dataset.tags?.split('|') ?? []
+        })),
+        {
+          keys: [
+            { name: 'title', weight: 0.6 },
+            { name: 'author', weight: 0.25 },
+            { name: 'tags', weight: 0.15 }
+          ],
+          threshold: 0.45,
+          ignoreLocation: true
+        }
+      );
 
-      // 心得/書摘全文第一次搜尋時才載入,載入後重建索引並重新篩選
-      let notesRequested = false;
-      function loadNotes() {
-        if (notesRequested || !root!.dataset.searchIndex) return;
-        notesRequested = true;
-        fetch(root!.dataset.searchIndex)
-          .then((response) => response.json() as Promise<Record<string, string>>)
-          .then((notes) => {
-            for (const item of indexed) item.notes = notes[item.el.dataset.id ?? ''] ?? '';
-            fuse = new Fuse(indexed, fuseOptions);
-            applyFilters();
-          })
-          .catch(() => { notesRequested = false; });
+      // 心得與書摘全文:Pagefind 建置時產生的分段索引,只下載用得到的片段
+      type Pagefind = { search: (query: string) => Promise<{ results: { data: () => Promise<{ meta: Record<string, string> }> }[] }> };
+      const cardsById = new Map(cards.map((card) => [card.dataset.id ?? '', card]));
+      let pagefind: Promise<Pagefind | null> | null = null;
+      let fullTextHits: HTMLElement[] = [];
+      let fullTextQuery = '';
+
+      function loadPagefind() {
+        // 開發模式沒有 Pagefind 索引(建置後才產生),只用 Fuse
+        if (!pagefind && import.meta.env.PROD && root!.dataset.pagefind) {
+          pagefind = import(/* @vite-ignore */ root!.dataset.pagefind).catch(() => null);
+        }
+        return pagefind;
+      }
+
+      async function runFullText(query: string) {
+        const engine = await loadPagefind();
+        if (!engine || search.value.trim() !== query) return;
+        const result = await engine.search(query);
+        const data = await Promise.all(result.results.slice(0, 50).map((item) => item.data()));
+        if (search.value.trim() !== query) return; // 使用者已經改了關鍵字
+        fullTextQuery = query;
+        fullTextHits = data.map((page) => cardsById.get(page.meta.slug ?? '')).filter((card): card is HTMLElement => Boolean(card));
+        applyFilters();
       }
 
       function applyFilters() {
@@ -197,9 +209,13 @@ const statusCounts = {
         const tag = tagFilter.value;
         const minimumRating = Number(ratingFilter.value);
 
-        const searching = search.value.trim().length > 0;
-        if (searching) loadNotes();
-        const ranked = searching ? fuse.search(search.value.trim()).map((r) => r.item.el) : null;
+        const term = search.value.trim();
+        const searching = term.length > 0;
+        if (searching && fullTextQuery !== term) void runFullText(term);
+        // 書目命中排前面,只在心得/書摘裡出現的排後面
+        const fuzzy = searching ? fuse.search(term).map((r) => r.item.el) : [];
+        const fullText = searching && fullTextQuery === term ? fullTextHits : [];
+        const ranked = searching ? [...new Set([...fuzzy, ...fullText])] : null;
 
         // 顯示順序:有搜尋詞依 Fuse 相關度,否則依使用者選的排序
         const sorted = [...cards].sort((a, b) => {
@@ -252,7 +268,7 @@ const statusCounts = {
         status = button.dataset.statusFilter ?? 'all';
         applyFilters();
       }));
-      search.addEventListener('focus', loadNotes, { once: true });
+      search.addEventListener('focus', () => { void loadPagefind(); }, { once: true });
       search.addEventListener('input', applyFilters);
       tagFilter.addEventListener('change', applyFilters);
       ratingFilter.addEventListener('change', applyFilters);

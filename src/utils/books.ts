@@ -44,8 +44,64 @@ export function isoDate(date: Date): string {
 export const STATUS_LABELS: Record<string, string> = {
   wantToRead: '想讀',
   reading: '正在讀',
-  finished: '已讀'
+  finished: '已讀',
+  abandoned: '棄讀'
 };
+
+/** 狀態徽章配色(卡片與詳情頁共用) */
+export const STATUS_STYLES: Record<string, string> = {
+  finished: 'bg-emerald-50 text-emerald-700 ring-emerald-600/15',
+  reading: 'bg-sky-50 text-sky-700 ring-sky-600/15',
+  wantToRead: 'bg-stone-100 text-stone-600 ring-stone-300/60',
+  abandoned: 'bg-rose-50 text-rose-700 ring-rose-600/15'
+};
+
+/** 一次「讀完」事件:第一次讀完或之後的重讀 */
+export type ReadEvent = { book: Book; startedAt?: Date; finishedAt: Date; reread: boolean; note?: string };
+
+/** 所有讀完事件(含重讀),依讀完日期由舊到新 */
+export function readEvents(books: Book[]): ReadEvent[] {
+  const events: ReadEvent[] = [];
+  for (const book of books) {
+    if (book.data.status === 'finished' && book.data.finishedAt) {
+      events.push({ book, startedAt: book.data.startedAt, finishedAt: book.data.finishedAt, reread: false });
+    }
+    for (const reread of book.data.rereads) {
+      events.push({ book, startedAt: reread.startedAt, finishedAt: reread.finishedAt, reread: true, note: reread.note });
+    }
+  }
+  return events.sort((a, b) => a.finishedAt.getTime() - b.finishedAt.getTime());
+}
+
+/** 作者頁網址片段;作者名稱含 / 時換成全形避免變成子路徑 */
+export function authorSlug(author: string): string {
+  return author.replace(/\//g, '／');
+}
+
+/** 每頁/天的閱讀速度;缺頁數或天數時回傳 null */
+export function pagesPerDay(book: Book): number | null {
+  const pages = totalPagesOf(book);
+  const days = readingDays(book.data.startedAt, book.data.finishedAt);
+  return pages && days ? pages / days : null;
+}
+
+/** 取出 body 中所有書摘引用(`>` blockquote),每段合併成一行純文字 */
+export function allQuotes(markdown: string): string[] {
+  const quotes: string[] = [];
+  let running: string[] | null = null;
+  for (const line of markdown.split('\n')) {
+    if (/^\s{0,3}>\s?/.test(line)) {
+      (running ??= []).push(line.replace(/^\s{0,3}>\s?/, '').trim());
+    } else if (running) {
+      quotes.push(running.join(' '));
+      running = null;
+    }
+  }
+  if (running) quotes.push(running.join(' '));
+  return quotes
+    .map((quote) => quote.replace(/[*_`]/g, '').trim().replace(/^「|」$/g, '').trim())
+    .filter(Boolean);
+}
 
 /** 評分星星字串,支援半顆星 */
 export function starString(rating: number | undefined): string {
@@ -65,19 +121,7 @@ export function readingDays(startedAt?: Date, finishedAt?: Date): number | null 
 
 /** 從 body 抽出第一段書摘引用(`>` blockquote)的純文字;沒有的話回傳 null */
 export function firstQuote(markdown: string): string | null {
-  const lines = markdown.split('\n');
-  let inQuote = false;
-  let running = '';
-  for (const line of lines) {
-    if (/^\s{0,3}>\s?/.test(line)) {
-      inQuote = true;
-      running += line.replace(/^\s{0,3}>\s?/, '').trim() + ' ';
-    } else if (inQuote) {
-      break;
-    }
-  }
-  running = running.trim().replace(/^「|」$/g, '').trim();
-  return running || null;
+  return allQuotes(markdown)[0] ?? null;
 }
 
 /** 從 Markdown 心得取出純文字摘要,去除標題/引用/清單等符號 */
