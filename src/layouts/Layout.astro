@@ -6,12 +6,15 @@ interface Props {
   description?: string;
   /** 分享圖(絕對或相對路徑,會被接上 base) */
   image?: string;
+  /** 是否支援夜讀模式(目前只有書籍詳情頁) */
+  nightMode?: boolean;
 }
 
 const {
   title = '',
   description = '收藏讀過的書、沿途的想法，以及那些捨不得忘記的句子。',
-  image
+  image,
+  nightMode = false
 } = Astro.props;
 
 const SITE_TITLE = '拾頁書室';
@@ -46,6 +49,14 @@ const isActive = (href: string) => href === BASE ? pathname === BASE : pathname.
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="generator" content={Astro.generator} />
     <meta name="theme-color" content="#f7f3eb" />
+    {nightMode && (
+      <script is:inline>
+        // 在繪製前套用夜讀設定,避免先閃一下白色
+        try {
+          if (localStorage.getItem('reader-night') === 'on') document.documentElement.setAttribute('data-night', '');
+        } catch (e) {}
+      </script>
+    )}
     <link rel="icon" type="image/svg+xml" href={`${BASE}favicon.svg`} />
     <link rel="alternate" type="application/rss+xml" title={`${SITE_TITLE} RSS`} href={`${BASE}rss.xml`} />
     <title>{pageTitle}</title>
@@ -78,7 +89,7 @@ const isActive = (href: string) => href === BASE ? pathname === BASE : pathname.
       跳至主要內容
     </a>
 
-    <header class="sticky top-0 z-50 border-b border-stone-200/70 bg-paper/88 backdrop-blur-xl">
+    <header class="site-header sticky top-0 z-50 border-b border-stone-200/70 bg-paper/88 backdrop-blur-xl">
       <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3.5 sm:px-8">
         <a href={BASE} class="group flex shrink-0 items-center gap-3" aria-label={`${SITE_TITLE}首頁`}>
           <span class="grid size-10 place-items-center rounded-xl bg-stone-900 text-white shadow-sm transition duration-300 group-hover:-rotate-3 group-hover:bg-clay" aria-hidden="true">
@@ -114,7 +125,7 @@ const isActive = (href: string) => href === BASE ? pathname === BASE : pathname.
       <slot />
     </main>
 
-    <footer class="mt-12 border-t border-stone-200/80 bg-white/35">
+    <footer class="site-footer mt-12 border-t border-stone-200/80 bg-white/35">
       <div class="mx-auto flex max-w-6xl flex-col gap-5 px-5 py-9 text-sm text-stone-500 sm:flex-row sm:items-end sm:justify-between sm:px-8">
         <div>
           <p class="font-serif text-xl font-bold text-stone-800">拾頁書室</p>

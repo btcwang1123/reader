@@ -1,12 +1,13 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
+import { isoDate } from '../utils/books';
 
 const books = await getCollection('books');
 const dateCounts = new Map<string, number>();
 for (const book of books) {
-  for (const date of book.data.readingDates ?? []) {
-    const key = date.toISOString().slice(0, 10);
+  // 同一本書同一天重複填寫只算一次
+  for (const key of new Set((book.data.readingDates ?? []).map(isoDate))) {
     dateCounts.set(key, (dateCounts.get(key) ?? 0) + 1);
   }
 }
@@ -43,8 +44,13 @@ const totalRecords = [...dateCounts.values()].reduce((sum, count) => sum + count
   <section class="surface mb-7 rounded-[1.5rem] p-5 sm:p-7" data-calendar data-dates={JSON.stringify(dates)} data-date-counts={JSON.stringify(Object.fromEntries(dateCounts))} data-initial-year={initialYear}>
     <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div><p class="eyebrow">Your reading days</p><h2 data-calendar-title class="mt-2 font-serif text-2xl font-semibold text-stone-900">{initialYear}</h2></div>
-      <p class="text-sm text-stone-500">今年記下 <strong data-calendar-count class="text-stone-900">{initialDays}</strong> 個閱讀日</p>
+      <p class="text-sm text-stone-500"><span data-calendar-year-label>{initialYear} 年</span>記下 <strong data-calendar-count class="text-stone-900">{initialDays}</strong> 個閱讀日</p>
     </div>
+    {uniqueDates === 0 && (
+      <p class="mb-6 rounded-xl bg-orange-50 px-4 py-3 text-sm leading-6 text-stone-600">
+        目前還沒有任何閱讀日紀錄。在書籍 frontmatter 加上 <code class="rounded bg-white px-1.5 py-0.5">readingDates</code> 後，有讀書的日子就會在這裡亮起來。
+      </p>
+    )}
     <div data-calendar-grid class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3" aria-live="polite"></div>
     <div class="mt-7 flex flex-wrap items-center gap-2 text-xs text-stone-500" aria-label="閱讀日曆圖例">
       <span>較少</span><i class="size-3 rounded-sm bg-stone-100"></i><i class="size-3 rounded-sm bg-orange-200"></i><i class="size-3 rounded-sm bg-orange-400"></i><i class="size-3 rounded-sm bg-clay"></i><span>同日多本</span>
@@ -66,12 +72,14 @@ const totalRecords = [...dateCounts.values()].reduce((sum, count) => sum + count
       const grid = root.querySelector<HTMLElement>('[data-calendar-grid]')!;
       const title = root.querySelector<HTMLElement>('[data-calendar-title]')!;
       const count = root.querySelector<HTMLElement>('[data-calendar-count]')!;
+      const yearLabel = root.querySelector<HTMLElement>('[data-calendar-year-label]')!;
       const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
 
       function renderCalendar(year: number) {
         title.textContent = String(year);
         const days = [...dates].filter((date) => date.startsWith(`${year}-`));
         count.textContent = String(days.length);
+        yearLabel.textContent = `${year} 年`;
         grid.replaceChildren();
 
         for (let month = 0; month < 12; month++) {

@@ -13,14 +13,16 @@
  *  --rating   X.X,1–5 可半星(已讀時建議)
  *  --tags     "科幻,小說"(逗號分隔,可省略)
  *  --isbn     ISBN(可省略)
- *  --started  YYYY-MM-DD(預設今天)
+ *  --started  YYYY-MM-DD(reading 時預設今天;finished 時不填就不寫)
  *  --finished YYYY-MM-DD(finished 時預設今天)
+ *  --pages    全書總頁數(統計累積頁數用,可省略)
  *  --currentPage / --totalPages 正在讀時的進度(兩者需成對)
  *  --minutes  閱讀時數,分鐘(可省略)
+ *  --force    同名檔案已存在時仍覆寫
  *  --help     顯示這份說明
  */
 import { createInterface } from 'node:readline';
-import { writeFileSync } from 'node:fs';
+import { existsSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -44,7 +46,7 @@ function parseArgs(argv) {
     if (!m) continue;
     const key = m[1];
     const val = argv[i + 1];
-    if (key === 'help') {
+    if (key === 'help' || key === 'force') {
       opts[key] = true;
     } else if (val !== undefined && !val.startsWith('--')) {
       opts[key] = val;
@@ -54,16 +56,27 @@ function parseArgs(argv) {
   return opts;
 }
 
+/** YAML 雙引號字串:跳脫反斜線與雙引號,避免書名含 " 時 frontmatter 壞掉 */
+function yamlStr(value) {
+  return `"${String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+}
+
+/** 本地時區的今天(toISOString 是 UTC,台灣早上 8 點前會變成昨天) */
+function localToday() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
 function buildFrontmatter(d) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localToday();
   const status = VALID_STATUS.includes(d.status) ? d.status : 'finished';
   const lines = [
     '---',
-    `title: "${d.title}"`,
-    `author: "${d.author}"`
+    `title: ${yamlStr(d.title)}`,
+    `author: ${yamlStr(d.author)}`
   ];
-  if (d.isbn) lines.push(`isbn: "${d.isbn}"`);
-  if (d.publisher) lines.push(`publisher: "${d.publisher}"`);
+  if (d.isbn) lines.push(`isbn: ${yamlStr(d.isbn)}`);
+  if (d.publisher) lines.push(`publisher: ${yamlStr(d.publisher)}`);
   if (d.publishedYear) lines.push(`publishedYear: ${d.publishedYear}`);
   lines.push(`status: ${status}`);
   if (d.rating) lines.push(`rating: ${d.rating}`);
@@ -72,23 +85,30 @@ function buildFrontmatter(d) {
       .split(/[,，]/)
       .map((t) => t.trim())
       .filter(Boolean);
-    if (arr.length) lines.push(`tags: [${arr.map((t) => `"${t}"`).join(', ')}]`);
+    if (arr.length) lines.push(`tags: [${arr.map(yamlStr).join(', ')}]`);
   }
+  if (d.pages) lines.push(`pages: ${d.pages}`);
   if (d.currentPage && d.totalPages) {
     lines.push('progress:');
     lines.push(`  currentPage: ${d.currentPage}`);
     lines.push(`  totalPages: ${d.totalPages}`);
   }
-  lines.push(`startedAt: ${d.started || today}`);
+  // 已讀的書不預設開始日期:補登舊書時填今天會讓「花費天數」變成 1 天、編年史全擠在同一天
+  if (d.started) lines.push(`startedAt: ${d.started}`);
+  else if (status === 'reading') lines.push(`startedAt: ${today}`);
   if (status === 'finished') lines.push(`finishedAt: ${d.finished || today}`);
   if (d.minutes) lines.push(`readingMinutes: ${d.minutes}`);
   lines.push('---', '', '## 心得', '', '(撰寫你的心得…)', '', '## 書摘與筆記', '', '- (書摘與筆記…)');
   return `${lines.join('\n')}\n`;
 }
 
-function writeBook(d) {
+function writeBook(d, force = false) {
   const slug = slugify(d.title) || 'untitled';
   const file = join(BOOKS_DIR, `${slug}.md`);
+  if (existsSync(file) && !force) {
+    console.error(`❌ ${file} 已存在,為避免覆蓋既有心得已停止。確定要覆寫請加 --force。`);
+    process.exit(1);
+  }
   writeFileSync(file, buildFrontmatter(d), 'utf8');
   console.log(`\n✅ 已建立 ${file}`);
   console.log('   封面可放置於 public/covers/,並在 frontmatter 加入 cover 欄位。');
@@ -119,8 +139,9 @@ if (opts.title && opts.author) {
     finished: opts.finished,
     currentPage: opts.currentPage,
     totalPages: opts.totalPages,
+    pages: opts.pages,
     minutes: opts.minutes
-  });
+  }, opts.force);
 } else if (process.stdin.isTTY) {
   // 互動式(僅真的有可輸入的終端機時)
   const rl = createInterface({ input: process.stdin, output: process.stdout });
@@ -139,8 +160,9 @@ if (opts.title && opts.author) {
     status === 'finished' ? (await q('評分 (1–5, 可半星, 可略過): ')).trim() : '';
   const tags = (await q('標籤 (逗號分隔, 可略過): ')).trim();
   const isbn = (await q('ISBN (可略過): ')).trim();
+  const pages = (await q('總頁數 (可略過): ')).trim();
   rl.close();
-  writeBook({ title, author, status, rating, tags, isbn });
+  writeBook({ title, author, status, rating, tags, isbn, pages });
 } else {
   // 無 TTY 且無參數 -> 印說明
   console.log('⚠️  目前沒有可輸入的終端機。請改用參數模式:');

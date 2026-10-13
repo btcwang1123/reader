@@ -48,7 +48,8 @@ export const GET: APIRoute = async ({ props }) => {
   const stars = book.data.rating ? '★'.repeat(Math.floor(book.data.rating)) + (book.data.rating % 1 ? '½' : '') : '';
   const fallbackCover = `<g><rect x="820" y="72" width="270" height="410" rx="16" fill="#3c332d"/><rect x="842" y="72" width="12" height="410" fill="#a6482d"/><text x="955" y="270" text-anchor="middle" font-size="32" fill="#f7f3eb">${escapeXml(book.data.title.slice(0, 12))}</text></g>`;
 
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}">
+  // 明確指定中文字型:CI(Linux) 用 fonts-noto-cjk,本機 Windows 退回微軟正黑體
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}" font-family="'Noto Serif CJK TC', 'Noto Sans CJK TC', 'Noto Serif TC', 'Microsoft JhengHei', serif">
     <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#fbf6ed"/><stop offset="1" stop-color="#eee5d8"/></linearGradient></defs>
     <rect width="1200" height="630" fill="url(#bg)"/><circle cx="1120" cy="65" r="170" fill="#e8d9c6" opacity=".42"/><path d="M0 540Q320 480 640 550T1200 520V630H0Z" fill="#a6482d" opacity=".08"/>
     <text x="96" y="108" font-size="22" letter-spacing="5" fill="#a6482d">拾頁書室 · 閱讀紀錄</text>

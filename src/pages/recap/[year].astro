@@ -3,7 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import BookCard from '../../components/BookCard.astro';
 import Stars from '../../components/Stars.astro';
 import { getCollection } from 'astro:content';
-import { firstQuote } from '../../utils/books';
+import { firstQuote, totalPagesOf } from '../../utils/books';
 
 export async function getStaticPaths() {
   const all = await getCollection('books');
@@ -17,7 +17,7 @@ const books = all
   .filter((book) => book.data.status === 'finished' && book.data.finishedAt?.getFullYear() === year)
   .sort((a, b) => (a.data.finishedAt?.getTime() ?? 0) - (b.data.finishedAt?.getTime() ?? 0));
 const BASE = import.meta.env.BASE_URL;
-const pages = books.reduce((sum, book) => sum + (book.data.progress?.totalPages ?? 0), 0);
+const pages = books.reduce((sum, book) => sum + totalPagesOf(book), 0);
 const minutes = books.reduce((sum, book) => sum + (book.data.readingMinutes ?? 0), 0);
 const rated = books.filter((book) => book.data.rating !== undefined);
 const average = rated.length ? rated.reduce((sum, book) => sum + (book.data.rating ?? 0), 0) / rated.length : null;

@@ -1,4 +1,4 @@
-import { getCollection, type CollectionEntry } from 'astro:content';
+import type { CollectionEntry } from 'astro:content';
 
 export type Book = CollectionEntry<'books'>;
 
@@ -28,6 +28,16 @@ export function sortByFinishedAsc(books: Book[]): Book[] {
 /** 正在閱讀的書籍 */
 export function reading(books: Book[]): Book[] {
   return books.filter((b) => b.data.status === 'reading');
+}
+
+/** 全書總頁數:優先 `pages`,沒有則用 `progress.totalPages` */
+export function totalPagesOf(book: Book): number {
+  return book.data.pages ?? book.data.progress?.totalPages ?? 0;
+}
+
+/** 日期轉 YYYY-MM-DD。frontmatter 日期以 UTC 午夜解析,取 UTC 欄位才不會因時區差一天 */
+export function isoDate(date: Date): string {
+  return date.toISOString().slice(0, 10);
 }
 
 /** 狀態的繁中標籤 */

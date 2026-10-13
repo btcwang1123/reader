@@ -12,7 +12,7 @@ const BASE = import.meta.env.BASE_URL;
   <header class="mb-10">
     <p class="eyebrow">Your data, always</p>
     <h1 class="page-title mt-3">帶走你的閱讀資料</h1>
-    <p class="mt-4 max-w-2xl text-sm leading-7 text-stone-500">一鍵下載結構化 JSON 備份。你的書、評分、日期、標籤與閱讀進度，都不會被鎖在平台裡。</p>
+    <p class="mt-4 max-w-2xl text-sm leading-7 text-stone-500">一鍵下載結構化 JSON 備份。你的書、評分、日期、標籤、閱讀進度與心得原文，都不會被鎖在平台裡。</p>
   </header>
 
   <section class="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
@@ -36,7 +36,7 @@ const BASE = import.meta.env.BASE_URL;
       <p class="eyebrow">Included</p>
       <h2 class="mt-2 font-serif text-xl font-semibold text-stone-900">匯出內容</h2>
       <ul class="mt-6 space-y-4 text-sm text-stone-600">
-        {['書名、作者與出版資訊', '閱讀狀態、日期與進度', '評分與所有標籤', '每本書的永久連結'].map((item) => (
+        {['書名、作者與出版資訊', '閱讀狀態、日期與進度', '評分與所有標籤', '心得與書摘 Markdown 原文', '每本書的永久連結'].map((item) => (
           <li class="flex items-center gap-3"><span class="grid size-5 place-items-center rounded-full bg-emerald-100 text-[0.65rem] font-bold text-emerald-700">✓</span>{item}</li>
         ))}
       </ul>

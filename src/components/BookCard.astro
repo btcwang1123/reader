@@ -36,7 +36,7 @@ const metaLabel = finishedLabel
 ---
 
 <article
-  class="card-lift group relative flex h-full gap-4 overflow-hidden rounded-[1.35rem] border border-stone-200/80 bg-white/80 p-4 shadow-sm sm:gap-5 sm:p-5"
+  class="book-card card-lift group relative flex h-full gap-4 overflow-hidden rounded-[1.35rem] border border-stone-200/80 bg-white/80 p-4 shadow-sm sm:gap-5 sm:p-5"
 >
   <!-- 整張卡片可點擊;標籤另外保留自己的連結 -->
   <a
@@ -91,7 +91,6 @@ const metaLabel = finishedLabel
           <a
             href={`${BASE}tags/${encodeURIComponent(tag)}/`}
             class="pointer-events-auto relative z-20 rounded-full bg-stone-100/90 px-2 py-0.5 text-[0.65rem] text-stone-500 transition hover:bg-amber-100 hover:text-clay"
-            onclick={(event) => event.stopPropagation()}
           >
             #{tag}
           </a>

@@ -18,7 +18,7 @@ const statusCounts = {
 ---
 
 <Layout title="書庫" description="搜尋、篩選並瀏覽書架裡的每一本書。">
-  <section data-library>
+  <section data-library data-search-index={`${import.meta.env.BASE_URL}search-index.json`}>
     <header class="mb-9 grid gap-5 md:grid-cols-[1fr_auto] md:items-end">
       <div>
         <p class="eyebrow">The collection</p>
@@ -105,6 +105,7 @@ const statusCounts = {
       {all.map((book, index) => (
         <article
           data-book
+          data-id={book.id}
           data-original-index={index}
           data-status={book.data.status}
           data-tags={book.data.tags.join('|')}
@@ -113,7 +114,6 @@ const statusCounts = {
           data-finished={book.data.finishedAt?.getTime() ?? 0}
           data-title={book.data.title}
           data-author={book.data.author}
-          data-notes={book.body ?? ''}
         >
           <BookCard book={book} />
         </article>
@@ -162,10 +162,10 @@ const statusCounts = {
         title: el.dataset.title ?? '',
         author: el.dataset.author ?? '',
         tags: el.dataset.tags?.split('|') ?? [],
-        notes: el.dataset.notes ?? ''
+        notes: ''
       }));
       // 書名、作者與筆記內容都可模糊搜尋,基本書目權重稍高
-      const fuse = new Fuse(indexed, {
+      const fuseOptions = {
         keys: [
           { name: 'title', weight: 0.35 },
           { name: 'author', weight: 0.15 },
@@ -174,7 +174,23 @@ const statusCounts = {
         ],
         threshold: 0.45,
         ignoreLocation: true
-      });
+      };
+      let fuse = new Fuse(indexed, fuseOptions);
+
+      // 心得/書摘全文第一次搜尋時才載入,載入後重建索引並重新篩選
+      let notesRequested = false;
+      function loadNotes() {
+        if (notesRequested || !root!.dataset.searchIndex) return;
+        notesRequested = true;
+        fetch(root!.dataset.searchIndex)
+          .then((response) => response.json() as Promise<Record<string, string>>)
+          .then((notes) => {
+            for (const item of indexed) item.notes = notes[item.el.dataset.id ?? ''] ?? '';
+            fuse = new Fuse(indexed, fuseOptions);
+            applyFilters();
+          })
+          .catch(() => { notesRequested = false; });
+      }
 
       function applyFilters() {
         const query = search.value.trim().toLocaleLowerCase('zh-Hant');
@@ -182,6 +198,7 @@ const statusCounts = {
         const minimumRating = Number(ratingFilter.value);
 
         const searching = search.value.trim().length > 0;
+        if (searching) loadNotes();
         const ranked = searching ? fuse.search(search.value.trim()).map((r) => r.item.el) : null;
 
         // 顯示順序:有搜尋詞依 Fuse 相關度,否則依使用者選的排序
@@ -235,6 +252,7 @@ const statusCounts = {
         status = button.dataset.statusFilter ?? 'all';
         applyFilters();
       }));
+      search.addEventListener('focus', loadNotes, { once: true });
       search.addEventListener('input', applyFilters);
       tagFilter.addEventListener('change', applyFilters);
       ratingFilter.addEventListener('change', applyFilters);

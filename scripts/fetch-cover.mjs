@@ -4,14 +4,18 @@
  * 用法:node scripts/fetch-cover.mjs <isbn>
  *   或  npm run fetch-cover -- <isbn>
  */
+import { mkdir, writeFile } from 'node:fs/promises';
+
 const [isbn] = process.argv.slice(2);
 if (!isbn) {
   console.error('用法: node scripts/fetch-cover.mjs <isbn>');
   process.exit(1);
 }
 
-const url = `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg`;
-const out = new URL(`../public/covers/${isbn}.jpg`, import.meta.url);
+// default=false:沒有封面時回 404,而不是回傳一張 1×1 的空白圖
+const url = `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg?default=false`;
+const dir = new URL('../public/covers/', import.meta.url);
+const out = new URL(`${isbn}.jpg`, dir);
 
 try {
   const res = await fetch(url);
@@ -20,7 +24,8 @@ try {
     process.exit(1);
   }
   const buf = Buffer.from(await res.arrayBuffer());
-  await import('node:fs/promises').then((fs) => fs.writeFile(out, buf));
+  await mkdir(dir, { recursive: true });
+  await writeFile(out, buf);
   console.log(`✅ 已存到 public/covers/${isbn}.jpg (${(buf.length / 1024).toFixed(1)} KB)`);
   console.log(`   在該書 frontmatter 加入: cover: "/covers/${isbn}.jpg"`);
 } catch (err) {

@@ -2,7 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import Stars from '../components/Stars.astro';
 import { getCollection } from 'astro:content';
-import { finished } from '../utils/books';
+import { finished, totalPagesOf } from '../utils/books';
 
 const all = await getCollection('books');
 const done = finished(all);
@@ -12,7 +12,7 @@ const recapYears = [...new Set(done.flatMap((book) => book.data.finishedAt ? [bo
 // 年度閱讀目標(想調整就改這個數字)
 const YEARLY_GOAL = 24;
 const totalFinished = done.length;
-const totalPages = done.reduce((sum, book) => sum + (book.data.progress?.totalPages ?? 0), 0);
+const totalPages = done.reduce((sum, book) => sum + totalPagesOf(book), 0);
 const totalMinutes = done.reduce((sum, book) => sum + (book.data.readingMinutes ?? 0), 0);
 const rated = done.filter((book) => book.data.rating);
 const avgRating = rated.length

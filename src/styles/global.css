@@ -81,8 +81,30 @@
 .prose blockquote { border-radius: 0 1rem 1rem 0; background: #fbf3e8; padding: 1.1rem 1.4rem; font-family: var(--font-serif); font-style: normal; }
 .prose code:not(pre code) { border-radius: 0.35rem; background: #eee9df; padding: 0.15rem 0.35rem; font-size: 0.85em; }
 
-/* 夜間閱讀模式:只作用於詳情頁的文章本體 */
-html[data-night] [data-reading-copy] { background: #211d1a; border-color: #2c2622; }
+/* 夜間閱讀模式:套用到詳情頁整頁(頁首、頁尾、卡片與文章) */
+html[data-night] { color-scheme: dark; }
+html[data-night] body { background-color: #171412; background-image: none; color: #d6d3d1; }
+html[data-night] body::before { opacity: 0.08; }
+html[data-night] .site-header { background: rgb(23 20 18 / 0.88); border-color: #2c2622; }
+html[data-night] .site-header a:not([aria-current]) { color: #a8a29e; }
+html[data-night] .site-header a:not([aria-current]):hover { background: #2a2420; color: #eeb4a1; }
+html[data-night] .site-header [aria-current] { background: #f5f5f4; color: #1c1917; }
+html[data-night] .site-header .text-stone-900 { color: #f5f5f4; }
+html[data-night] .site-footer { background: #1c1917; border-color: #2c2622; }
+html[data-night] .site-footer .text-stone-800 { color: #e7e5e4; }
+html[data-night] .surface,
+html[data-night] .book-card,
+html[data-night] [data-reading-copy],
+html[data-night] main details,
+html[data-night] main button { background: #211d1a; border-color: #2c2622; }
+html[data-night] main .text-stone-900,
+html[data-night] main .text-stone-800,
+html[data-night] main .text-stone-700 { color: #f5f5f4; }
+html[data-night] main .text-stone-600,
+html[data-night] main .text-stone-500 { color: #a8a29e; }
+html[data-night] main .border-stone-200,
+html[data-night] main .border-stone-100 { border-color: #2c2622; }
+html[data-night] main .bg-stone-100\/90 { background: #2a2420; color: #a8a29e; }
 html[data-night] .prose {
   color: #d6d3d1;
   --tw-prose-body: #d6d3d1;
